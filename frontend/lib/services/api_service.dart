@@ -246,4 +246,49 @@ class ApiService {
   static Future<Map<String, dynamic>> analyzeDocument(String filePath) async {
     return uploadFile(filePath);
   }
+
+
+  // ===== SOCIAL MEDIA =====
+  
+  static Future<Map<String, dynamic>> getSocialAccounts() async {
+    return _get('\$baseUrl/social/accounts');
+  }
+
+  static Future<Map<String, dynamic>> connectSocialAccount(Map<String, dynamic> data) async {
+    return _post('\$baseUrl/social/accounts', data);
+  }
+
+  static Future<Map<String, dynamic>> getSocialPosts({String? platform, String? status}) async {
+    String query = '';
+    if (platform != null) query += 'platform=\$platform&';
+    if (status != null) query += 'status=\$status&';
+    if (query.isNotEmpty) query = '?' + query.substring(0, query.length - 1);
+    
+    return _get('\$baseUrl/social/posts\$query');
+  }
+
+  static Future<Map<String, dynamic>> createSocialPost(Map<String, dynamic> data) async {
+    return _post('\$baseUrl/social/posts', data);
+  }
+
+  static Future<Map<String, dynamic>> deleteSocialPost(String postId) async {
+    return _delete('\$baseUrl/social/posts/\$postId');
+  }
+
+  static Future<Map<String, dynamic>> generateSocialCaption(Map<String, dynamic> data) async {
+    return _post('\$baseUrl/social/generate-caption', data);
+  }
+
+  static Future<Map<String, dynamic>> getSocialAnalytics({String? platform, String period = '7days'}) async {
+    String query = 'period=\$period';
+    if (platform != null) query += '&platform=\$platform';
+    
+    return _get('\$baseUrl/social/analytics?\$query');
+  }
+
+
+  static Future<Map<String, dynamic>> disconnectSocialAccount(String accountId) async {
+    return _delete('\$baseUrl/social/accounts/\$accountId');
+  }
+
 }

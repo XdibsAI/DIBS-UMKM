@@ -155,6 +155,9 @@ async def send_message(
         # Generate AI response
         ai_response = await ollama_ai.generate(request.message, context=context, use_nvidia=use_nvidia)
         
+        # Improve table formatting for mobile
+        ai_response = improve_table_formatting(ai_response)
+        
         # Save assistant message
         assistant_msg_id = str(uuid.uuid4())
         await db.execute(

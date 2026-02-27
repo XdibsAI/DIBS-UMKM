@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/services/api_service.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/social_provider.dart';
-import 'package:flutter/services.dart'; // Tambahkan ini
 
 class SocialScreen extends StatefulWidget {
-  const SocialScreen({super.key});
+  const SocialScreen({Key? key}) : super(key: key);
 
   @override
   State<SocialScreen> createState() => _SocialScreenState();
@@ -12,28 +13,22 @@ class SocialScreen extends StatefulWidget {
 
 class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  late AnimationController _glowController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     
-    _glowController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-
-    // Load posts on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SocialProvider>().loadAccounts();
       context.read<SocialProvider>().loadPosts();
+      context.read<SocialProvider>().loadAnalytics();
     });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _glowController.dispose();
     super.dispose();
   }
 
@@ -41,123 +36,316 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0A0A0F), Color(0xFF050507)],
-          ),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF050507),
+        elevation: 0,
+        title: const Text(
+          'Social Media',
+          style: TextStyle(color: Color(0xFF00FFFF), fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        child: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverAppBar(
-                expandedHeight: 120,
-                floating: false,
-                pinned: true,
-                backgroundColor: const Color(0xFF050507),
-                flexibleSpace: FlexibleSpaceBar(
-                  title: const Text(
-                    'SOCIAL MEDIA',
-                    style: TextStyle(
-                      color: Color(0xFFFF44AA),
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  background: Container(
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFFFF44AA), Color(0xFF9D4DFF)],
-                      ).withOpacity(0.1),
-                    ),
-                  ),
-                ),
-                bottom: TabBar(
-                  controller: _tabController,
-                  indicatorColor: const Color(0xFFFF44AA),
-                  indicatorWeight: 3,
-                  labelColor: const Color(0xFFFF44AA),
-                  unselectedLabelColor: const Color(0xFF8888AA),
-                  tabs: const [
-                    Tab(text: 'POSTS'),
-                    Tab(text: 'AI TOOLS'),
-                    Tab(text: 'SCHEDULE'),
-                  ],
-                ),
-              ),
-            ];
-          },
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF0A0A0F), Color(0xFF050507)],
-              ),
-            ),
-            child: TabBarView(
-              controller: _tabController,
-              children: const [
-                PostsTab(),
-                AIToolsTab(),
-                ScheduleTab(),
-              ],
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF00FFFF)),
+            onPressed: () => _showCreatePostDialog(),
+            tooltip: 'Create Post',
           ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF00FFFF),
+          labelColor: const Color(0xFF00FFFF),
+          unselectedLabelColor: Colors.grey,
+          tabs: const [
+            Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
+            Tab(icon: Icon(Icons.post_add), text: 'Posts'),
+            Tab(icon: Icon(Icons.auto_fix_high), text: 'AI Generator'),
+          ],
         ),
       ),
-      floatingActionButton: AnimatedBuilder(
-        animation: _glowController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFFF44AA).withOpacity(_glowController.value * 0.5),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: FloatingActionButton(
-              onPressed: () => _showCreatePostDialog(context),
-              backgroundColor: const Color(0xFFFF44AA),
-              child: const Icon(Icons.add, color: Color(0xFF0A0A0F)),
-            ),
-          );
-        },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildDashboard(),
+          _buildPosts(),
+          _buildAIGenerator(),
+        ],
       ),
     );
   }
 
-  void _showCreatePostDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => const CreatePostDialog(),
-    );
-  }
-}
-
-// Posts Tab
-class PostsTab extends StatelessWidget {
-  const PostsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
+  // 📊 Dashboard Tab
+  Widget _buildDashboard() {
     return Consumer<SocialProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF44AA)),
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
+        }
+
+        final analytics = provider.analytics;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Connected Accounts
+              const Text(
+                'Connected Accounts',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              
+              if (provider.accounts.isEmpty)
+                _buildEmptyAccounts()
+              else
+                ...provider.accounts.map((account) => _buildAccountCard(account)),
+              
+              const SizedBox(height: 24),
+              
+              // Analytics Cards
+              const Text(
+                'Analytics Overview',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Posts',
+                      '${analytics['total_posts'] ?? 0}',
+                      Icons.post_add,
+                      Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Engagement',
+                      '${analytics['total_engagement'] ?? 0}',
+                      Icons.favorite,
+                      Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Followers',
+                      '+${analytics['follower_growth'] ?? 0}',
+                      Icons.people,
+                      Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Scheduled',
+                      '${analytics['scheduled'] ?? 0}',
+                      Icons.schedule,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Best posting time
+              if (analytics['best_time'] != null)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time, color: Color(0xFF00FFFF), size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Best Posting Time',
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                            Text(
+                              analytics['best_time'],
+                              style: const TextStyle(
+                                color: Color(0xFF00FFFF),
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyAccounts() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.link_off, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text(
+            'No Accounts Connected',
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Connect your social media accounts to get started',
+            style: TextStyle(color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => _showConnectAccountDialog(),
+            icon: const Icon(Icons.add),
+            label: const Text('Connect Account'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00FFFF),
+              foregroundColor: Colors.black,
             ),
-          );
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountCard(Map<String, dynamic> account) {
+    final platform = account['platform'] ?? 'unknown';
+    final username = account['username'] ?? 'Unknown';
+    
+    IconData icon;
+    Color color;
+    
+    switch (platform.toLowerCase()) {
+      case 'instagram':
+        icon = Icons.camera_alt;
+        color = Colors.pink;
+        break;
+      case 'facebook':
+        icon = Icons.facebook;
+        color = Colors.blue;
+        break;
+      case 'twitter':
+        icon = Icons.person;
+        color = Colors.lightBlue;
+        break;
+      case 'tiktok':
+        icon = Icons.music_note;
+        color = Colors.black;
+        break;
+      default:
+        icon = Icons.public;
+        color = Colors.grey;
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withOpacity(0.2),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  platform.toUpperCase(),
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '@$username',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'Connected',
+              style: TextStyle(color: Colors.green, fontSize: 12),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.red, size: 20),
+            onPressed: () => _disconnectAccount(account['id']),
+            tooltip: 'Disconnect',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          Text(
+            title,
+            style: const TextStyle(color: Colors.grey, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 📝 Posts Tab
+  Widget _buildPosts() {
+    return Consumer<SocialProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
         }
 
         if (provider.posts.isEmpty) {
@@ -165,37 +353,26 @@ class PostsTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFFF44AA).withOpacity(0.3),
-                      width: 2,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.photo_library_outlined,
-                    size: 64,
-                    color: Color(0xFFFF44AA),
-                  ),
-                ),
-                const SizedBox(height: 24),
+                const Icon(Icons.post_add, size: 80, color: Colors.grey),
+                const SizedBox(height: 16),
                 const Text(
-                  'BELUM ADA POSTS',
-                  style: TextStyle(
-                    color: Color(0xFFFF44AA),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
+                  'No Posts Yet',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Buat post pertama Anda!',
-                  style: TextStyle(
-                    color: const Color(0xFF8888AA).withOpacity(0.8),
-                    fontSize: 14,
+                const Text(
+                  'Create your first post to get started',
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => _showCreatePostDialog(),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Post'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FFFF),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                 ),
               ],
@@ -203,741 +380,570 @@ class PostsTab extends StatelessWidget {
           );
         }
 
-        return RefreshIndicator(
-          onRefresh: () => provider.loadPosts(),
-          color: const Color(0xFFFF44AA),
-          child: ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: provider.posts.length,
-            itemBuilder: (context, index) {
-              final post = provider.posts[index];
-              return PostCard(post: post);
-            },
-          ),
-        );
-      },
-    );
-  }
-}
-
-// AI Tools Tab
-class AIToolsTab extends StatefulWidget {
-  const AIToolsTab({super.key});
-
-  @override
-  State<AIToolsTab> createState() => _AIToolsTabState();
-}
-
-class _AIToolsTabState extends State<AIToolsTab> with SingleTickerProviderStateMixin {
-  final _topicController = TextEditingController();
-  String _selectedPlatform = 'instagram';
-  String _selectedTone = 'casual';
-  
-  late AnimationController _glowController;
-  late Animation<double> _glowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-    
-    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _topicController.dispose();
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SocialProvider>(
-      builder: (context, provider, child) {
-        return SingleChildScrollView(
+        return ListView.builder(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Topic Input dengan style cyber
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFFF44AA).withOpacity(0.3),
-                  ),
-                ),
-                child: TextField(
-                  controller: _topicController,
-                  style: const TextStyle(color: Color(0xFFE0E0FF)),
-                  decoration: InputDecoration(
-                    labelText: 'TOPIC / DESCRIPTION',
-                    labelStyle: const TextStyle(color: Color(0xFFFF44AA)),
-                    hintText: 'Contoh: sunset di pantai, promo produk baru...',
-                    hintStyle: TextStyle(
-                      color: const Color(0xFF8888AA).withOpacity(0.5),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFF050507),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                  maxLines: 3,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Platform Selector
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFFFF44AA).withOpacity(0.3),
-                  ),
-                ),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedPlatform,
-                  dropdownColor: const Color(0xFF12121A),
-                  style: const TextStyle(color: Color(0xFFE0E0FF)),
-                  decoration: InputDecoration(
-                    labelText: 'PLATFORM',
-                    labelStyle: const TextStyle(color: Color(0xFFFF44AA)),
-                    filled: true,
-                    fillColor: const Color(0xFF050507),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  ),
-                  items: ['instagram', 'facebook', 'twitter', 'linkedin', 'tiktok']
-                      .map((p) => DropdownMenuItem(
-                            value: p,
-                            child: Row(
-                              children: [
-                                _getPlatformIcon(p),
-                                const SizedBox(width: 8),
-                                Text(p.toUpperCase()),
-                              ],
-                            ),
-                          ))
-                      .toList(),
-                  onChanged: (val) => setState(() => _selectedPlatform = val!),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Generate Caption Button dengan efek glow
-              AnimatedBuilder(
-                animation: _glowAnimation,
-                builder: (context, child) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF44AA).withOpacity(_glowAnimation.value * 0.3),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: provider.isGenerating
-                          ? null
-                          : () {
-                              if (_topicController.text.isNotEmpty) {
-                                provider.generateCaption(
-                                  topic: _topicController.text,
-                                  tone: _selectedTone,
-                                  platform: _selectedPlatform,
-                                );
-                              }
-                            },
-                      icon: provider.isGenerating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A0A0F)),
-                              ),
-                            )
-                          : const Icon(Icons.auto_awesome, color: Color(0xFF0A0A0F)),
-                      label: Text(
-                        provider.isGenerating ? 'GENERATING...' : 'GENERATE CAPTION',
-                        style: const TextStyle(
-                          color: Color(0xFF0A0A0F),
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF44AA),
-                        padding: const EdgeInsets.all(16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-
-              // Generate Hashtags Button
-              ElevatedButton.icon(
-                onPressed: provider.isGenerating
-                    ? null
-                    : () {
-                        if (_topicController.text.isNotEmpty) {
-                          provider.suggestHashtags(
-                            topic: _topicController.text,
-                            platform: _selectedPlatform,
-                          );
-                        }
-                      },
-                icon: const Icon(Icons.tag, color: Color(0xFFE0E0FF)),
-                label: const Text(
-                  'SUGGEST HASHTAGS',
-                  style: TextStyle(
-                    color: Color(0xFFE0E0FF),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF9D4DFF),
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                  shadowColor: const Color(0xFF9D4DFF).withOpacity(0.5),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Results
-              if (provider.generatedCaption.isNotEmpty) ...[
-                _buildResultSection(
-                  title: 'GENERATED CAPTION',
-                  color: const Color(0xFFFF44AA),
-                  content: provider.generatedCaption,
-                  onCopy: () {
-                    // Copy functionality
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              if (provider.suggestedHashtags.isNotEmpty) ...[
-                _buildResultSection(
-                  title: 'SUGGESTED HASHTAGS',
-                  color: const Color(0xFF9D4DFF),
-                  hashtags: provider.suggestedHashtags,
-                ),
-              ],
-            ],
-          ),
+          itemCount: provider.posts.length,
+          itemBuilder: (context, index) {
+            final post = provider.posts[index];
+            return _buildPostCard(post, provider);
+          },
         );
       },
     );
   }
 
-  Widget _getPlatformIcon(String platform) {
-    IconData iconData;
-    switch (platform) {
-      case 'instagram':
-        iconData = Icons.photo_camera;
+  Widget _buildPostCard(Map<String, dynamic> post, SocialProvider provider) {
+    final platform = post['platform'] ?? 'unknown';
+    final content = post['content'] ?? '';
+    final status = post['status'] ?? 'draft';
+    final scheduledAt = post['scheduled_at'];
+    
+    Color statusColor;
+    String statusText;
+    
+    switch (status) {
+      case 'published':
+        statusColor = Colors.green;
+        statusText = 'Published';
         break;
-      case 'facebook':
-        iconData = Icons.facebook;
-        break;
-      case 'twitter':
-        iconData = Icons.alternate_email;
-        break;
-      case 'linkedin':
-        iconData = Icons.business_center;
-        break;
-      case 'tiktok':
-        iconData = Icons.music_note;
+      case 'scheduled':
+        statusColor = Colors.orange;
+        statusText = 'Scheduled';
         break;
       default:
-        iconData = Icons.public;
+        statusColor = Colors.grey;
+        statusText = 'Draft';
     }
-    return Icon(iconData, color: const Color(0xFFFF44AA), size: 18);
-  }
-
-  Widget _buildResultSection({
-    required String title,
-    required Color color,
-    String? content,
-    List<String>? hashtags,
-    VoidCallback? onCopy,
-  }) {
+    
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [color.withOpacity(0.1), const Color(0xFF050507)],
-        ),
+        color: const Color(0xFF1A1A2E),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: statusColor.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  platform.toUpperCase(),
+                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
                 ),
               ),
-              if (content != null)
-                IconButton(
-                  icon: Icon(Icons.copy, color: color, size: 20),
-                  onPressed: onCopy,
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(color: statusColor, fontSize: 10),
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: () => _deletePost(post['id'], provider),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          if (content != null)
-            SelectableText(
-              content,
-              style: const TextStyle(
-                color: Color(0xFFE0E0FF),
-                fontSize: 14,
-                height: 1.6,
-              ),
-            ),
-          if (hashtags != null)
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: hashtags.map((tag) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: color.withOpacity(0.3)),
-                ),
-                child: Text(
-                  tag,
-                  style: TextStyle(color: color, fontSize: 13),
-                ),
-              )).toList(),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// Schedule Tab
-class ScheduleTab extends StatelessWidget {
-  const ScheduleTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFF00FFFF).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            child: const Icon(
-              Icons.calendar_month,
-              size: 64,
-              color: Color(0xFF00FFFF),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'SCHEDULE CALENDAR',
-            style: TextStyle(
-              color: Color(0xFF00FFFF),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 8),
           Text(
-            'Coming Soon',
-            style: TextStyle(
-              color: const Color(0xFF8888AA).withOpacity(0.8),
-              fontSize: 14,
-            ),
+            content,
+            style: const TextStyle(color: Colors.white),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
+          if (scheduledAt != null) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.schedule, color: Colors.grey, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'Scheduled: ${_formatDateTime(scheduledAt)}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
-}
 
-// Post Card Widget
-class PostCard extends StatelessWidget {
-  final Map<String, dynamic> post;
-
-  const PostCard({super.key, required this.post});
-
-  Color _getPlatformColor(String platform) {
-    switch (platform.toLowerCase()) {
-      case 'instagram':
-        return const Color(0xFFFF44AA);
-      case 'facebook':
-        return const Color(0xFF00D9FF);
-      case 'twitter':
-        return const Color(0xFF00FFFF);
-      case 'linkedin':
-        return const Color(0xFF9D4DFF);
-      case 'tiktok':
-        return const Color(0xFF00FFAA);
-      default:
-        return const Color(0xFFFF44AA);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final platform = post['platform'] ?? 'unknown';
-    final platformColor = _getPlatformColor(platform);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF12121A), Color(0xFF0A0A0F)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: platformColor.withOpacity(0.3), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
+  // 🤖 AI Generator Tab
+  Widget _buildAIGenerator() {
+    return Consumer<SocialProvider>(
+      builder: (context, provider, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'AI Caption Generator',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Let DIBS AI create engaging captions for your posts',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              
+              ElevatedButton.icon(
+                onPressed: () => _showAIGeneratorDialog(),
+                icon: const Icon(Icons.auto_fix_high),
+                label: const Text('Generate Caption with AI'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00FFFF),
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  minimumSize: const Size(double.infinity, 0),
+                ),
+              ),
+              
+              if (provider.generatedCaption.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                const Text(
+                  'Generated Caption:',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: platformColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: platformColor.withOpacity(0.3)),
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        _getPlatformIcon(platform),
-                        color: platformColor,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
                       Text(
-                        platform.toUpperCase(),
-                        style: TextStyle(
-                          color: platformColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                        provider.generatedCaption,
+                        style: const TextStyle(color: Colors.white, height: 1.5),
+                      ),
+                      if (provider.suggestedHashtags.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: provider.suggestedHashtags.map((tag) {
+                            return Chip(
+                              label: Text(tag),
+                              backgroundColor: const Color(0xFF00FFFF).withOpacity(0.2),
+                              labelStyle: const TextStyle(color: Color(0xFF00FFFF)),
+                            );
+                          }).toList(),
                         ),
+                      ],
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                // Copy to clipboard
+                                provider.clearGeneratedContent();
+                              },
+                              icon: const Icon(Icons.copy),
+                              label: const Text('Copy'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF00FFFF),
+                                side: const BorderSide(color: Color(0xFF00FFFF)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _useGeneratedCaption(provider.generatedCaption),
+                              icon: const Icon(Icons.send),
+                              label: const Text('Use Caption'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00FFFF),
+                                foregroundColor: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: const Color(0xFF12121A),
-                        title: const Text(
-                          'HAPUS POST',
-                          style: TextStyle(color: Color(0xFFFF44AA)),
-                        ),
-                        content: const Text(
-                          'Yakin ingin menghapus post ini?',
-                          style: TextStyle(color: Color(0xFFE0E0FF)),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: const BorderSide(color: Color(0xFFFF44AA), width: 0.5),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFF8888AA),
-                            ),
-                            child: const Text('BATAL'),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialogs
+  void _showConnectAccountDialog() {
+    final usernameController = TextEditingController();
+    String selectedPlatform = 'Instagram';
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: const Color(0xFF1A1A2E),
+          title: const Text('Connect Account', style: TextStyle(color: Colors.white)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Demo Mode: Enter any username to simulate connection',
+                        style: TextStyle(color: Colors.blue, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedPlatform,
+                dropdownColor: const Color(0xFF1A1A2E),
+                style: const TextStyle(color: Colors.white),
+                items: ['Instagram', 'Facebook', 'Twitter', 'TikTok']
+                    .map((p) => DropdownMenuItem(
+                      value: p,
+                      child: Row(
+                        children: [
+                          Icon(
+                            p == 'Instagram' ? Icons.camera_alt :
+                            p == 'Facebook' ? Icons.facebook :
+                            p == 'Twitter' ? Icons.person :
+                            Icons.music_note,
+                            size: 20,
+                            color: p == 'Instagram' ? Colors.pink :
+                                   p == 'Facebook' ? Colors.blue :
+                                   p == 'Twitter' ? Colors.lightBlue :
+                                   Colors.white,
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(ctx);
-                              context.read<SocialProvider>().deletePost(post['id']);
-                            },
-                            style: TextButton.styleFrom(
-                              foregroundColor: const Color(0xFFFF44AA),
-                            ),
-                            child: const Text('HAPUS'),
-                          ),
+                          const SizedBox(width: 8),
+                          Text(p),
                         ],
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              post['caption'] ?? '',
-              style: const TextStyle(
-                color: Color(0xFFE0E0FF),
-                fontSize: 14,
-                height: 1.5,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: post['status'] == 'published'
-                        ? const Color(0xFF00FFAA).withOpacity(0.15)
-                        : const Color(0xFFFF44AA).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: post['status'] == 'published'
-                          ? const Color(0xFF00FFAA).withOpacity(0.3)
-                          : const Color(0xFFFF44AA).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    'Status: ${post['status'] ?? 'draft'}'.toUpperCase(),
-                    style: TextStyle(
-                      color: post['status'] == 'published'
-                          ? const Color(0xFF00FFAA)
-                          : const Color(0xFFFF44AA),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getPlatformIcon(String platform) {
-    switch (platform.toLowerCase()) {
-      case 'instagram':
-        return Icons.photo_camera;
-      case 'facebook':
-        return Icons.facebook;
-      case 'twitter':
-        return Icons.alternate_email;
-      case 'linkedin':
-        return Icons.business_center;
-      case 'tiktok':
-        return Icons.music_note;
-      default:
-        return Icons.public;
-    }
-  }
-}
-
-// Create Post Dialog
-class CreatePostDialog extends StatefulWidget {
-  const CreatePostDialog({super.key});
-
-  @override
-  State<CreatePostDialog> createState() => _CreatePostDialogState();
-}
-
-class _CreatePostDialogState extends State<CreatePostDialog> {
-  final _captionController = TextEditingController();
-  String _selectedPlatform = 'instagram';
-  bool _isSaving = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF12121A),
-      title: const Text(
-        'BUAT POST BARU',
-        style: TextStyle(
-          color: Color(0xFFFF44AA),
-          fontWeight: FontWeight.bold,
-          letterSpacing: 1,
-        ),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Platform Selector
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFF44AA).withOpacity(0.3),
-                ),
-              ),
-              child: DropdownButtonFormField<String>(
-                value: _selectedPlatform,
-                dropdownColor: const Color(0xFF12121A),
-                style: const TextStyle(color: Color(0xFFE0E0FF)),
-                decoration: InputDecoration(
-                  labelText: 'PLATFORM',
-                  labelStyle: const TextStyle(color: Color(0xFFFF44AA)),
-                  filled: true,
-                  fillColor: const Color(0xFF050507),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                ),
-                items: ['instagram', 'facebook', 'twitter', 'linkedin', 'tiktok']
-                    .map((p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(p.toUpperCase()),
-                        ))
+                    ))
                     .toList(),
-                onChanged: (val) => setState(() => _selectedPlatform = val!),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Caption Input
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFFFF44AA).withOpacity(0.3),
+                onChanged: (val) => setState(() => selectedPlatform = val!),
+                decoration: const InputDecoration(
+                  labelText: 'Platform',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  prefixIcon: Icon(Icons.public, color: Color(0xFF00FFFF)),
                 ),
               ),
-              child: TextField(
-                controller: _captionController,
-                style: const TextStyle(color: Color(0xFFE0E0FF)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: usernameController,
                 decoration: InputDecoration(
-                  labelText: 'CAPTION',
-                  labelStyle: const TextStyle(color: Color(0xFFFF44AA)),
-                  hintText: 'Tulis caption post Anda...',
-                  hintStyle: TextStyle(
-                    color: const Color(0xFF8888AA).withOpacity(0.5),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF050507),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.all(16),
+                  labelText: 'Username',
+                  labelStyle: const TextStyle(color: Colors.grey),
+                  hintText: 'your_username',
+                  hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
+                  prefixIcon: const Icon(Icons.alternate_email, color: Color(0xFF00FFFF)),
                 ),
-                maxLines: 5,
+                style: const TextStyle(color: Colors.white),
               ),
-            ),
-          ],
-        ),
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: Color(0xFFFF44AA), width: 0.5),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF8888AA),
+            ],
           ),
-          child: const Text('BATAL'),
-        ),
-        ElevatedButton(
-          onPressed: _isSaving
-              ? null
-              : () async {
-                  if (_captionController.text.isEmpty) return;
-                  
-                  setState(() => _isSaving = true);
-                  
-                  // Simulate saving
-                  await Future.delayed(const Duration(seconds: 1));
-                  
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (usernameController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('✅ Post berhasil dibuat'),
-                      backgroundColor: Color(0xFF12121A),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(12)),
-                        side: BorderSide(color: Color(0xFFFF44AA), width: 0.5),
-                      ),
+                      content: Text('❌ Please enter username'),
+                      backgroundColor: Colors.red,
                     ),
                   );
-                },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFFF44AA),
-            foregroundColor: const Color(0xFF0A0A0F),
-          ),
-          child: _isSaving
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A0A0F)),
-                  ),
-                )
-              : const Text('BUAT'),
+                  return;
+                }
+                
+                Navigator.pop(ctx);
+                
+                // Show loading
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('🔄 Connecting account...')),
+                );
+                
+                final success = await context.read<SocialProvider>().connectAccount(
+                  platform: selectedPlatform.toLowerCase(),
+                  username: usernameController.text.trim(),
+                );
+                
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✅ @\${usernameController.text} connected to \$selectedPlatform!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('❌ Failed to connect. Account may already exist.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
+              child: const Text('Connect', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    _captionController.dispose();
-    super.dispose();
+  void _showCreatePostDialog() {
+    final contentController = TextEditingController();
+    String selectedPlatform = 'instagram';
+    DateTime? scheduledTime;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Create Post', style: TextStyle(color: Colors.white)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: selectedPlatform,
+                dropdownColor: const Color(0xFF1A1A2E),
+                style: const TextStyle(color: Colors.white),
+                items: ['instagram', 'facebook', 'twitter', 'tiktok']
+                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                    .toList(),
+                onChanged: (val) => selectedPlatform = val!,
+                decoration: const InputDecoration(
+                  labelText: 'Platform',
+                  labelStyle: TextStyle(color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Caption',
+                  labelStyle: TextStyle(color: Colors.grey),
+                  hintText: 'Write your caption here...',
+                ),
+                style: const TextStyle(color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final success = await context.read<SocialProvider>().createPost(
+                platform: selectedPlatform,
+                content: contentController.text,
+                scheduledAt: scheduledTime ?? DateTime.now(),
+              );
+              
+              Navigator.pop(ctx);
+              
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Post scheduled!')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
+            child: const Text('Schedule', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAIGeneratorDialog() {
+    final topicController = TextEditingController();
+    String selectedPlatform = 'instagram';
+    String selectedTone = 'friendly';
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('AI Caption Generator', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: topicController,
+              decoration: const InputDecoration(
+                labelText: 'Topic',
+                labelStyle: TextStyle(color: Colors.grey),
+                hintText: 'e.g., New product launch',
+              ),
+              style: const TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedPlatform,
+              dropdownColor: const Color(0xFF1A1A2E),
+              style: const TextStyle(color: Colors.white),
+              items: ['instagram', 'facebook', 'twitter', 'tiktok']
+                  .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                  .toList(),
+              onChanged: (val) => selectedPlatform = val!,
+              decoration: const InputDecoration(labelText: 'Platform'),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: selectedTone,
+              dropdownColor: const Color(0xFF1A1A2E),
+              style: const TextStyle(color: Colors.white),
+              items: ['friendly', 'professional', 'funny', 'inspiring']
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (val) => selectedTone = val!,
+              decoration: const InputDecoration(labelText: 'Tone'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await context.read<SocialProvider>().generateCaption(
+                topic: topicController.text,
+                platform: selectedPlatform,
+                tone: selectedTone,
+              );
+              
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
+            child: const Text('Generate', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deletePost(String postId, SocialProvider provider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Delete Post?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await provider.deletePost(postId);
+              Navigator.pop(ctx);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('✅ Post deleted')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _useGeneratedCaption(String caption) {
+    // Navigate to create post with pre-filled caption
+    _showCreatePostDialog();
+  }
+
+  String _formatDateTime(String isoString) {
+    try {
+      final dt = DateTime.parse(isoString);
+      return DateFormat('MMM dd, yyyy HH:mm').format(dt);
+    } catch (e) {
+      return isoString;
+    }
+  }
+
+  void _disconnectAccount(String accountId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Disconnect Account?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'You can reconnect anytime.',
+          style: TextStyle(color: Colors.grey),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final response = await ApiService.disconnectSocialAccount(accountId);
+              if (response['status'] == 'success') {
+                context.read<SocialProvider>().loadAccounts();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Account disconnected')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Disconnect'),
+          ),
+        ],
+      ),
+    );
   }
 }
