@@ -36,6 +36,8 @@ from video.vision_routes import router as vision_router
 from toko.database import TokoDatabase
 from toko.routes import router as toko_router, set_database as set_toko_db
 from nvidia_routes import router as nvidia_router
+from dibs_routes import router as dibs_router  # <--- TAMBAHKAN INI (NEW)
+
 
 # Global instances
 db = None
@@ -111,6 +113,7 @@ app.include_router(video_router)
 app.include_router(vision_router)
 app.include_router(toko_router)  # <-- TAMBAHKAN TOKO ROUTER
 app.include_router(nvidia_router)
+app.include_router(dibs_router)  # <--- TAMBAHKAN INI (NEW)
 
 # Health endpoint
 @app.get("/health")
