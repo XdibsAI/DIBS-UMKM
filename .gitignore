@@ -28,3 +28,6 @@ build/
 *.spec
 backend/.env*
 backend/.env
+*.log
+*.backup*
+*.original*
