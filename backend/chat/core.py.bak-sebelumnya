@@ -1,0 +1,148 @@
+import os
+import logging
+import httpx
+import asyncio
+from typing import Optional, Dict, Any
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
+# Konfigurasi Nvidia Nemotron
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "nvapi-xxxxxxxxxxxx")  # Ganti karo API key asline
+NVIDIA_API_URL = "https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions"
+NEMOTRON_FUNCTION_ID = "3f8d8f4c-5a6b-4c7d-9e0f-1a2b3c4d5e6f"  # ID function Nemotron
+
+class NvidiaNemotron:
+    """Kelas kanggo komunikasi karo Nvidia Nemotron API"""
+    
+    def __init__(self, api_key: str = NVIDIA_API_KEY):
+        self.api_key = api_key
+        self.client = httpx.AsyncClient(timeout=60.0)
+        self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        logger.info("Nvidia Nemotron initialized")
+    
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Generate response from Nvidia Nemotron"""
+        try:
+            # Cek API key
+            if not self.api_key or self.api_key == "nvapi-xxxxxxxxxxxx":
+                return "❌ NVIDIA_API_KEY durung diset. Tambahke neng .env file."
+            
+            # Payload kanggo Nemotron
+            payload = {
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": system_prompt or "Kamu adalah DIBS, asisten AI yang membantu coding."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "max_tokens": 2000,
+                "stream": False
+            }
+            
+            # Panggil Nvidia API
+            url = f"{NVIDIA_API_URL}/{NEMOTRON_FUNCTION_ID}"
+            logger.info(f"Calling Nvidia Nemotron API...")
+            
+            response = await self.client.post(
+                url,
+                headers=self.headers,
+                json=payload,
+                timeout=60.0
+            )
+            
+            if response.status_code == 401:
+                return "❌ API Key salah. Cek NVIDIA_API_KEY neng .env"
+            elif response.status_code == 403:
+                return "❌ Ora duwe akses. Cek subscription Nvidia."
+            elif response.status_code == 429:
+                return "❌ Rate limit exceeded. Coba maneh mengko."
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            # Extract response (format beda-beda)
+            if "choices" in result:
+                return result["choices"][0].get("message", {}).get("content", "")
+            elif "response" in result:
+                return result["response"]
+            else:
+                return str(result)
+            
+        except httpx.ConnectError:
+            return "❌ Gagal konek nang Nvidia API. Cek internet."
+        except httpx.TimeoutException:
+            return "❌ Nvidia API timeout. Coba maneh."
+        except Exception as e:
+            logger.error(f"Nvidia API error: {e}")
+            return f"⚠️ Error: {e}"
+    
+    async def close(self):
+        await self.client.aclose()
+
+# Fallback ke Ollama lokal yen Nvidia gagal
+class OllamaFallback:
+    def __init__(self, model: str = "llama3.2:latest"):
+        self.model = model
+        self.client = httpx.AsyncClient(timeout=60.0)
+    
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        try:
+            payload = {
+                "model": self.model,
+                "prompt": prompt,
+                "system": system_prompt,
+                "stream": False
+            }
+            response = await self.client.post(
+                "http://localhost:11434/api/generate",
+                json=payload,
+                timeout=60.0
+            )
+            response.raise_for_status()
+            result = response.json()
+            return result.get("response", "")
+        except:
+            return "❌ Kabeh AI gagal. Nvidia API error lan Ollama ora mlaku."
+        finally:
+            await self.client.aclose()
+
+# Main class - coba Nvidia disek, gagal pake Ollama
+class AIAssistant:
+    def __init__(self):
+        self.nvidia = NvidiaNemotron()
+        self.ollama = None
+    
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        # COBA NVIDIA DISEK
+        try:
+            result = await self.nvidia.generate(prompt, system_prompt)
+            if not result.startswith("❌") and not result.startswith("⚠️"):
+                logger.info("✅ Using Nvidia Nemotron")
+                return result
+        except Exception as e:
+            logger.warning(f"Nvidia failed: {e}")
+        
+        # FALLBACK KE OLLAMA
+        try:
+            if not self.ollama:
+                self.ollama = OllamaFallback()
+            result = await self.ollama.generate(prompt, system_prompt)
+            logger.info("✅ Using Ollama fallback")
+            return result
+        except Exception as e:
+            logger.error(f"All AI failed: {e}")
+            return "❌ Gagal generate. Coba `ollama serve` utawa cek API key."
+
+# Global instance
+ollama_ai = AIAssistant()  # Iki jenenge ollama_ai nanging sejatine multi-AI

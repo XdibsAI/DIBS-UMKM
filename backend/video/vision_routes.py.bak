@@ -1,0 +1,237 @@
+"""Vision API Routes - Image Analysis & Script Generation"""
+import os
+import uuid
+import base64
+import logging
+from pathlib import Path
+from datetime import datetime
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, BackgroundTasks
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+import aiofiles
+
+from openai import OpenAI
+from config.settings import settings
+from auth.utils import get_current_user, TokenData
+#from video.generator import video_generator
+
+logger = logging.getLogger('DIBS1.VISION')
+
+router = APIRouter(prefix="/api/video/vision", tags=["vision"])
+
+# Konfigurasi
+UPLOAD_DIR = Path("uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+# Inisialisasi OpenAI client untuk NVIDIA
+client = OpenAI(
+    api_key=settings.nvidia_api_key,
+    base_url="https://integrate.api.nvidia.com/v1"
+)
+
+class ScriptResponse(BaseModel):
+    success: bool
+    image_id: Optional[str] = None
+    product_name: Optional[str] = None
+    script: Optional[str] = None
+    video_id: Optional[str] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+class VideoGenerateRequest(BaseModel):
+    image_id: str
+    custom_script: Optional[str] = None
+    duration: int = 30
+
+@router.post("/upload", response_model=ScriptResponse)
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """
+    Upload gambar, analisis dengan AI, dan generate script video
+    """
+    try:
+        # Validasi file
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(400, "File harus berupa gambar")
+        
+        # Generate ID unik
+        image_id = str(uuid.uuid4())
+        file_ext = os.path.splitext(file.filename)[1]
+        file_path = UPLOAD_DIR / f"{image_id}{file_ext}"
+        
+        # Simpan file
+        async with aiofiles.open(file_path, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+        
+        logger.info(f"✅ Gambar tersimpan: {file_path}")
+        
+        # Baca file untuk base64
+        with open(file_path, 'rb') as f:
+            base64_image = base64.b64encode(f.read()).decode('utf-8')
+        
+        # Panggil Llama Vision untuk analisis
+        try:
+            vision_response = client.chat.completions.create(
+                model="meta/llama-3.2-11b-vision-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": """Analisis gambar produk ini. Berikan output dalam format JSON:
+{
+  "product_name": "nama produk",
+  "category": "kategori produk (fashion/makanan/elektronik/dll)",
+  "description": "deskripsi singkat",
+  "target_audience": "target pasar",
+  "unique_selling_points": ["poin1", "poin2", "poin3"]
+}
+
+Kemudian buatkan script video promosi 30 detik dengan format:
+HOOK: (kalimat pembuka)
+BODY: (deskripsi produk, manfaat)
+CTA: (ajakan membeli)"""
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens=500
+            )
+            
+            analysis = vision_response.choices[0].message.content
+            logger.info(f"✅ Analisis vision selesai")
+            
+        except Exception as e:
+            logger.error(f"❌ Vision API error: {e}")
+            analysis = "Gagal menganalisis gambar. Script akan dibuat manual."
+        
+        # Generate script otomatis (kalau vision gagal)
+        if "Gagal" in analysis:
+            try:
+                script_response = client.chat.completions.create(
+                    model="nvidia/nemotron-3-nano-30b-a3b",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": f"""Buatkan script video promosi 30 detik untuk produk dari gambar.
+Format:
+HOOK: (kalimat pembuka)
+BODY: (deskripsi produk, manfaat)
+CTA: (ajakan membeli)"""
+                        }
+                    ],
+                    max_tokens=300
+                )
+                script = script_response.choices[0].message.content
+            except:
+                script = "Gagal generate script"
+        else:
+            script = analysis
+        
+        return ScriptResponse(
+            success=True,
+            image_id=image_id,
+            product_name="Produk dari gambar",
+            script=script,
+            message="Gambar berhasil diproses"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Upload error: {e}")
+        return ScriptResponse(
+            success=False,
+            error=str(e)
+        )
+
+@router.post("/generate-video", response_model=ScriptResponse)
+async def generate_video_from_image(
+    request: VideoGenerateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """
+    Generate video dari gambar yang sudah diupload
+    """
+    try:
+        # Cari file gambar
+        image_files = list(UPLOAD_DIR.glob(f"{request.image_id}.*"))
+        if not image_files:
+            raise HTTPException(404, "Gambar tidak ditemukan")
+        
+        image_path = image_files[0]
+        
+        # Kalau ada custom script, gunakan itu
+        script = request.custom_script
+        if not script:
+            # Generate script dari gambar (panggil vision lagi)
+            with open(image_path, 'rb') as f:
+                base64_image = base64.b64encode(f.read()).decode('utf-8')
+            
+            vision_response = client.chat.completions.create(
+                model="meta/llama-3.2-11b-vision-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": "Buatkan script video promosi 30 detik untuk produk ini."},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                        ]
+                    }
+                ],
+                max_tokens=300
+            )
+            script = vision_response.choices[0].message.content
+        
+        # Generate video (panggil video generator yang sudah ada)
+        # Ini akan diimplementasi nanti
+        video_id = str(uuid.uuid4())
+        
+        # Simpan ke database
+        # await video_generator.create_project(video_id, script, image_path)
+        
+        # Background task untuk proses video
+        # background_tasks.add_task(video_generator.process, video_id)
+        
+        return ScriptResponse(
+            success=True,
+            image_id=request.image_id,
+            script=script,
+            video_id=video_id,
+            message="Video generation started"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Generate video error: {e}")
+        return ScriptResponse(
+            success=False,
+            error=str(e)
+        )
+
+@router.get("/image/{image_id}")
+async def get_image(
+    image_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get uploaded image (untuk preview)"""
+    image_files = list(UPLOAD_DIR.glob(f"{image_id}.*"))
+    if not image_files:
+        raise HTTPException(404, "Image not found")
+    
+    from fastapi.responses import FileResponse
+    return FileResponse(image_files[0])

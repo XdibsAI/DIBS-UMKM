@@ -1,0 +1,52 @@
+INFO:     Started server process [158183]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8765 (Press CTRL+C to quit)
+
+╔══════════════════════════════════════════════════════════════╗
+║              DIBS MCP SERVER - PRODUCTION                    ║
+║                  Listening on port 8765                       ║
+╠══════════════════════════════════════════════════════════════╣
+║ Project Root: /home/dibs/dibs1                    ║
+║ Pydantic Version: Compatible with v2.8.x                      ║
+║ Allowed Commands: ls, cat, grep, find, head, tail, pwd, echo ║
+╚══════════════════════════════════════════════════════════════╝
+    
+INFO:     139.162.33.108:60092 - "GET / HTTP/1.0" 404 Not Found
+INFO:     139.162.33.108:60096 - "OPTIONS / HTTP/1.0" 404 Not Found
+INFO:     139.162.33.108:60110 - "OPTIONS / HTTP/1.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     139.162.33.108:60232 - "GET /nice%20ports%2C/Trinity.txt.bak HTTP/1.0" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     139.162.33.108:60404 - "GET /devicedesc.xml HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     139.162.33.108:60522 - "GET / HTTP/1.1" 404 Not Found
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+WARNING:  Invalid HTTP request received.
+INFO:     185.247.137.7:47199 - "GET / HTTP/1.1" 404 Not Found

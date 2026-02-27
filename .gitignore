@@ -1,0 +1,28 @@
+# Databases & Temps
+*.db
+*.db-shm
+*.db-wal
+*.db.backup*
+backup_berhasil_*
+downloads/
+video_outputs/
+test_images/
+test.txt
+
+# Environment & Secrets
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+*.spec

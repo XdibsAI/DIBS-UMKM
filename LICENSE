@@ -1,0 +1,58 @@
+                    GNU AFFERO GENERAL PUBLIC LICENSE
+                       Version 3, 19 November 2007
+
+ Copyright (C) 2024-2026 DIBS AI Team
+ 
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Affero General Public License as published
+ by the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Affero General Public License for more details.
+
+ You should have received a copy of the GNU Affero General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+
+                            DIBS AI LICENSE NOTICE
+
+This software is licensed under AGPLv3 with the following clarifications:
+
+1. OPEN SOURCE USAGE:
+   - ✅ Free for personal use
+   - ✅ Free for educational use
+   - ✅ Free for non-profit organizations
+   - ✅ Modifications must be shared under same license
+
+2. COMMERCIAL USAGE:
+   - ⚠️  If you run DIBS AI as a service (SaaS), you MUST:
+     a) Make your source code publicly available (AGPLv3 requirement)
+     b) OR obtain a commercial license from DIBS AI Team
+   
+3. CONTRIBUTIONS:
+   - All contributions are licensed under AGPLv3
+   - Contributors retain copyright of their contributions
+   - By contributing, you agree to license under AGPLv3
+
+4. NETWORK USE:
+   - If you modify and use DIBS AI over a network, you MUST offer
+     the complete source code to users of your service
+
+5. PREMIUM FEATURES:
+   - Some features may require separate commercial licensing
+   - Contact: dibsardiant@gmail.com for commercial inquiries
+
+================================================================================
+
+Full AGPLv3 License Text:
+https://www.gnu.org/licenses/agpl-3.0.txt
+
+For commercial licensing options:
+📧 Email: dibsardiant@gmail.com
+🌐 Website: https://github.com/yourusername/dibs-ai
+
+================================================================================
