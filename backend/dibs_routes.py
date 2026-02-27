@@ -17,3 +17,8 @@ async def ask(q: str):
 async def search(query: str):
     """Cari di internet lewat Serper.dev"""
     return await dibs_engine.web_search(query)
+
+@router.get("/analyze")
+async def analyze_file(filename: str, task: str = "Deskripsikan produk ini"):
+    """Powerup: Menyuruh Dibs melihat file yang sudah diupload"""
+    return {"analysis": await dibs_engine.analyze_image(filename, task)}

@@ -129,3 +129,16 @@ async def get_current_user_info(current_user: TokenData = Depends(get_current_us
             "gender": user.get('gender', '')  # TAMBAH
         }
     }
+
+
+@router.get("/verify")
+async def verify_token(current_user: TokenData = Depends(get_current_user)):
+    """Verify if token is valid"""
+    return {
+        "status": "success",
+        "data": {
+            "user_id": current_user.user_id,
+            "email": current_user.email
+        }
+    }
+
