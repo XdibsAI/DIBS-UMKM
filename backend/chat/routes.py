@@ -7,6 +7,12 @@ import logging
 from .models import SendMessageRequest, ChatMessage
 from .core import ollama_ai
 from auth.utils import get_current_user, TokenData
+from chat.table_formatter import improve_table_formatting
+from chat.language_detector import detect_language, enhance_prompt_with_language
+from chat.command_parser import command_parser
+from chat.dynamic_db import get_dynamic_db
+from reminders.parser import reminder_parser
+from reminders.models import get_reminder_manager
 
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
 logger = logging.getLogger('DIBS1')
@@ -152,8 +158,64 @@ async def send_message(
         )
         context = [{"role": m['role'], "content": m['content']} for m in reversed(list(context_messages))]
         
+        # === REMINDER SYSTEM ===
+        reminder_cmd = reminder_parser.parse(request.message)
+        logger.info(f"🔍 Reminder parsed: {reminder_cmd}")
+        
+        if reminder_cmd and reminder_cmd.get('action') == 'create_reminder':
+            logger.info(f"✅ Creating reminder: {reminder_cmd['title']}")
+            
+            try:
+                reminder_mgr = get_reminder_manager()
+                
+                reminder_id = await reminder_mgr.create_reminder(
+                    user_id=current_user.user_id,
+                    session_id=session_id,
+                    title=reminder_cmd['title'],
+                    due_date=reminder_cmd['due_date'],
+                    description=request.message
+                )
+                
+                if reminder_id:
+                    due_str = reminder_cmd['due_date'].strftime('%d %b %Y, %H:%M')
+                    ai_response = f"✅ Pengingat berhasil dibuat!\n\n"
+                    ai_response += f"📌 **Tentang:** {reminder_cmd['title']}\n"
+                    ai_response += f"⏰ **Waktu:** {due_str}\n"
+                    ai_response += f"🔔 Saya akan mengingatkan Anda saat waktunya tiba."
+                    
+                    logger.info(f"✅ Reminder saved: {reminder_id}")
+                else:
+                    ai_response = "❌ Gagal membuat pengingat"
+                
+                # Save and return
+                assistant_msg_id = str(uuid.uuid4())
+                await db.execute(
+                    "INSERT INTO chat_messages (id, session_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (assistant_msg_id, session_id, "assistant", ai_response, datetime.now(timezone.utc).isoformat())
+                )
+                
+                return {
+                    "status": "success",
+                    "data": {
+                        "assistant_message": {
+                            "role": "assistant",
+                            "content": ai_response,
+                            "created_at": datetime.now(timezone.utc).isoformat()
+                        }
+                    }
+                }
+                
+            except Exception as e:
+                logger.error(f"❌ Reminder error: {e}")
+        # === END REMINDER ===
+
+        
+        # Detect language and enhance prompt
+        detected_lang = detect_language(request.message)
+        enhanced_message = enhance_prompt_with_language(request.message, detected_lang)
+        
         # Generate AI response
-        ai_response = await ollama_ai.generate(request.message, context=context, use_nvidia=use_nvidia)
+        ai_response = await ollama_ai.generate(enhanced_message, context=context, use_nvidia=use_nvidia)
         
         # Improve table formatting for mobile
         ai_response = improve_table_formatting(ai_response)

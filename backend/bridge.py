@@ -44,6 +44,31 @@ class DibsBridge:
             return row[0] if row else "Dibs tidak menemukan catatan terkait itu."
         except Exception as e: return f"Error recall: {str(e)}"
 
+
+    
+
+
+    def manage_pelanggan(self, action: str, data: dict = None):
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            if action == 'add':
+                query = 'INSERT INTO pelanggan (toko, barang, qty, tanggal, catatan) VALUES (?, ?, ?, ?, ?)'
+                cursor.execute(query, (data['toko'], data['barang'], data['qty'], data['tanggal'], data.get('catatan', '')))
+                msg = f'✅ Dibs wis nyatet titipan neng {data["toko"]}.'
+            elif action == 'list':
+                query = 'SELECT toko, barang, qty, tanggal FROM pelanggan ORDER BY tanggal DESC LIMIT 10'
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                if not rows: return 'Dibs ora nemu data pelanggan neng database.'
+                items = [f'• {r[0]}: {r[2]}x {r[1]} ({r[3]})' for r in rows]
+                msg = '📊 **Data Pelanggan Terakhir:**\n' + '\n'.join(items)
+            else: msg = 'Aksi ora dingerteni.'
+            conn.commit()
+            conn.close()
+            return msg
+        except Exception as e:
+            return f'❌ Waduh Jon, ana error neng db: {str(e)}'
     async def analyze_image(self, filename: str, prompt: str = "Deskripsikan gambar ini"):
         # Cari file di uploads atau test_images
         possible_paths = [

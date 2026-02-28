@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 
 # Import configurations
@@ -79,6 +80,25 @@ async def lifespan(app: FastAPI):
 
     logger.info("✅ All modules initialized")
 
+    
+    # === REMINDER SYSTEM ===
+    logger.info("🔔 Initializing reminder system...")
+    
+    from reminders.models import get_reminder_manager
+    from reminders.scheduler import get_scheduler
+    
+    try:
+        reminder_mgr = get_reminder_manager()
+        await reminder_mgr.initialize()
+        logger.info("✅ Reminder tables initialized")
+        
+        scheduler = get_scheduler()
+        scheduler_task = asyncio.create_task(scheduler.start())
+        logger.info("✅ Reminder scheduler task created")
+        
+    except Exception as e:
+        logger.error(f"❌ Reminder system error: {e}")
+    
     yield
 
     # ===== CLEANUP =====
