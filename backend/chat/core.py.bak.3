@@ -1,22 +1,13 @@
 """Chat AI Core - Dual Provider (Ollama + Nemotron via OpenAI SDK)"""
 import logging
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 import time
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 import re
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 import os
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 from typing import List, Dict, Optional, Tuple
 from openai import OpenAI
 import httpx
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 
-from config.settings import (
-    ollama_url, ollama_timeout, ai_model,
-    nvidia_api_key, use_nvidia,
-    host, port, db_path
-)
+from config.settings import settings
 
 logger = logging.getLogger('DIBS1')
 
@@ -85,7 +76,7 @@ class NemotronAI:
     """Nemotron via NVIDIA API using OpenAI SDK"""
 
     def __init__(self):
-        self.api_key = nvidia_api_key
+        self.api_key = settings.NVIDIA_API_KEY
         if not self.api_key:
             logger.warning("⚠️ NVIDIA API key not configured")
             self.client = None
@@ -162,9 +153,9 @@ class OllamaAI:
     """Ollama Local Provider"""
 
     def __init__(self):
-        self.url = ollama_url
-        self.model = ai_model
-        self.timeout = ollama_timeout
+        self.url = settings.ollama_url
+        self.model = settings.ai_model
+        self.timeout = settings.ollama_timeout
         self.conversation_history = {}
 
     def is_first_message(self, session_id: str) -> bool:
@@ -231,9 +222,9 @@ class AIProvider:
     """Smart AI Provider with auto-fallback"""
 
     def __init__(self):
-        self.nemotron = NemotronAI() if nvidia_api_key else None
+        self.nemotron = NemotronAI() if settings.NVIDIA_API_KEY else None
         self.ollama = OllamaAI()
-        self.use_nvidia = use_nvidia and bool(nvidia_api_key)
+        self.use_nvidia = settings.use_nvidia and bool(settings.NVIDIA_API_KEY)
 
     async def generate(
         self,

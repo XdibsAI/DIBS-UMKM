@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-from config.settings import ENABLE_VIDEO_GENERATION, VIDEO_SERVER_URL
 from pydantic import BaseModel, validator
 from typing import Optional, List
 import logging
@@ -74,7 +73,7 @@ async def generate_video(
     logger.info(f"🎬 Video generation requested by user: {current_user['id']}")
     
     # Check feature flag
-    if not ENABLE_VIDEO_GENERATION:
+    if not settings.ENABLE_VIDEO_GENERATION:
         raise HTTPException(503, "Video generation is currently disabled")
     
     # Import here to avoid circular imports
@@ -126,7 +125,7 @@ async def get_video_status(
     video_url = None
     
     if status == VideoStatus.COMPLETED.value and result['video_path']:
-        video_url = f"{VIDEO_SERVER_URL}/videos/{result['video_path']}"
+        video_url = f"{settings.VIDEO_SERVER_URL}/videos/{result['video_path']}"
     
     return VideoResponse(
         success=True,
@@ -163,7 +162,7 @@ async def list_videos(
             success=True,
             project_id=p['id'],
             status=p['status'],
-            video_url=f"{VIDEO_SERVER_URL}/videos/{p['video_path']}" if p['video_path'] else None
+            video_url=f"{settings.VIDEO_SERVER_URL}/videos/{p['video_path']}" if p['video_path'] else None
         )
         for p in projects
     ]

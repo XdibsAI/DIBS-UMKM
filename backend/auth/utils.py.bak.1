@@ -1,5 +1,4 @@
 """Authentication Utilities - JWT & Password"""
-from config.settings import jwt_secret_key, jwt_algorithm
 import bcrypt
 import jwt
 from datetime import datetime, timedelta
@@ -27,12 +26,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(days=30))
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, jwt_secret_key, algorithm=jwt_algorithm)
+    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
 
 def verify_token(token: str) -> TokenData:
     """Verify and decode JWT token"""
     try:
-        payload = jwt.decode(token, jwt_secret_key, algorithms=[jwt_algorithm])
+        payload = jwt.decode(token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm])
         return TokenData(user_id=payload.get("user_id"), email=payload.get("email"))
     except jwt.ExpiredSignatureError:
         raise HTTPException(401, "Token expired")

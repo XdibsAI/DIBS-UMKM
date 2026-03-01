@@ -28,7 +28,7 @@ from database.manager import DatabaseManager
 
 # Import video agent & language intelligence
 from video_agent import initialize_video_agent
-from chat.language.language_detector import LanguageDetector
+from language_intelligence import LanguageIntelligence
 
 # Import routers
 from auth.routes import router as auth_router, set_database as set_auth_db
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
 
     # ===== INITIALIZE OTHER COMPONENTS =====
     video_agent = initialize_video_agent(db, settings.OLLAMA_URL)
-    language_ai = LanguageDetector()
+    language_ai = LanguageIntelligence()
 
     # ===== INJECT DEPENDENCIES =====
     set_auth_db(db)

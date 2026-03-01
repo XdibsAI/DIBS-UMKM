@@ -8,7 +8,7 @@ from .models import SendMessageRequest, ChatMessage
 from .core import ollama_ai
 from auth.utils import get_current_user, TokenData
 from chat.table_formatter import improve_table_formatting
-from chat.language.language_detector import detect_language, enhance_prompt_with_language
+from chat.language_detector import detect_language, enhance_prompt_with_language
 from chat.command_parser import command_parser
 from chat.dynamic_db import get_dynamic_db
 from reminders.parser import reminder_parser

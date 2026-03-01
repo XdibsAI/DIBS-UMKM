@@ -6,16 +6,15 @@ from enum import Enum
 from typing import Optional, Dict, Any
 from datetime import datetime
 import logging
-import uuid
 
-from video.core import video_editor, tts_handler, story_generator
+from video.core.video_editor import video_editor
+from video.core.tts_handler import tts_handler
 
 logger = logging.getLogger(__name__)
 
 class VideoStatus(Enum):
     PENDING = "pending"
     PROCESSING = "processing"
-    SCRIPT_GENERATING = "script_generating"
     AUDIO_GENERATING = "audio_generating"
     VIDEO_RENDERING = "video_rendering"
     COMPLETED = "completed"
@@ -30,52 +29,40 @@ class VideoPipeline:
         self.ollama_url = ollama_url
         self.active_tasks: Dict[str, asyncio.Task] = {}
 
-    async def create_project(self, user_id: str, niche: str, duration: int = 30, 
-                           style: str = "engaging", language: str = "id") -> str:
+    async def create_project(self, user_id: str, niche: str, duration: int = 30) -> str:
         """Create new video project"""
+        import uuid
         project_id = str(uuid.uuid4())
         
         await self.db.execute("""
             INSERT INTO video_projects 
-            (id, user_id, niche, duration, style, language, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, user_id, niche, duration, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
-            project_id, user_id, niche, duration, style, language,
+            project_id, user_id, niche, duration, 
             VideoStatus.PENDING.value,
             datetime.now().isoformat(),
             datetime.now().isoformat()
         ))
         
         logger.info(f"✅ Project created: {project_id}")
-        
-        # Start background processing
-        asyncio.create_task(self.process_project(project_id, niche, duration, style, language))
-        
         return project_id
 
-    async def process_project(self, project_id: str, niche: str, duration: int,
-                            style: str, language: str):
+    async def process_project(self, project_id: str, script: str, 
+                            language: str = 'id', duration: int = 30):
         """Process video project with full pipeline"""
         try:
             # Update status
             await self._update_status(project_id, VideoStatus.PROCESSING)
             
-            # Step 1: Generate script
-            await self._update_status(project_id, VideoStatus.SCRIPT_GENERATING)
-            script_data = await story_generator.generate_script(niche, style, duration)
-            script = script_data.get('full_script', '')
-            
-            if not script:
-                raise Exception("Script generation failed")
-            
-            # Step 2: Generate audio
+            # Step 1: Generate audio
             await self._update_status(project_id, VideoStatus.AUDIO_GENERATING)
             audio_path = await self._generate_audio(script, language)
             
             if not audio_path:
                 raise Exception("Audio generation failed")
             
-            # Step 3: Generate video
+            # Step 2: Generate video
             await self._update_status(project_id, VideoStatus.VIDEO_RENDERING)
             output_filename = f"video_{project_id[:8]}.mp4"
             video_path = await video_editor.create_video_from_script(
@@ -85,7 +72,7 @@ class VideoPipeline:
                 duration=duration
             )
             
-            # Step 4: Update success
+            # Step 3: Update success
             await self._update_status(
                 project_id, 
                 VideoStatus.COMPLETED,
@@ -114,7 +101,8 @@ class VideoPipeline:
                 logger.warning(f"Audio attempt {attempt+1} failed: {e}")
         return None
 
-    async def _update_status(self, project_id: str, status: VideoStatus, **kwargs):
+    async def _update_status(self, project_id: str, status: VideoStatus, 
+                            **kwargs):
         """Update project status in database"""
         updates = ['status = ?', 'updated_at = ?']
         params = [status.value, datetime.now().isoformat()]
@@ -134,24 +122,3 @@ class VideoPipeline:
             SET {', '.join(updates)}
             WHERE id = ?
         """, params)
-
-    async def get_project(self, project_id: str, user_id: str) -> Optional[Dict]:
-        """Get project details"""
-        from config.settings import PUBLIC_URL
-        
-        project = await self.db.fetch_one(
-            "SELECT * FROM video_projects WHERE id = ? AND user_id = ?",
-            (project_id, user_id)
-        )
-        
-        if not project:
-            return None
-            
-        result = dict(project)
-        
-        # Add download URL if completed
-        if result.get('video_path') and result['status'] == VideoStatus.COMPLETED.value:
-            filename = result['video_path'].split('/')[-1]
-            result['download_url'] = f"{PUBLIC_URL}:9091/videos/{filename}"
-            
-        return result
