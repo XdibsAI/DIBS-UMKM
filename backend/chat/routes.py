@@ -1,3 +1,4 @@
+from utils.errors import handle_errors, NotFoundError
 """Chat Routes"""
 from fastapi import APIRouter, HTTPException, Depends, Query, UploadFile, File
 from datetime import datetime, timezone
@@ -25,6 +26,7 @@ def set_database(database):
     db = database
 
 @router.get("/sessions")
+@handle_errors
 async def get_sessions(current_user: TokenData = Depends(get_current_user)):
     """Get user's chat sessions"""
     try:

@@ -1,33 +1,102 @@
-# Databases & Temps
+# ===== DATABASES =====
 *.db
-*.db-shm
-*.db-wal
+*.db-*
+*.sqlite
+*.sqlite3
+data/
 *.db.backup*
-backup_berhasil_*
-downloads/
-video_outputs/
-test_images/
-test.txt
 
-# Environment & Secrets
-.env
-.env.local
+# ===== LOGS =====
+*.log
+logs/
+backend.log
+http.log
+mcp.log
+build.log
+pub_get.log
 
-# Python
+# ===== PYTHON =====
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.Python
 venv/
 .venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
 
-# Flutter/Dart
+# ===== ENVIRONMENT =====
+.env
+.env.local
+.env.production
+.env.development
+
+# ===== UPLOADS & DOWNLOADS =====
+uploads/
+downloads/
+video_outputs/
+videos/
+temp/
+*.mp4
+*.mp3
+*.wav
+*.jpg
+*.jpeg
+*.png
+*.gif
+!test_images/placeholder.jpg
+
+# ===== BACKUP FILES =====
+*.bak
+*.bak.*
+*.backup
+backups/
+*.orig
+*.original
+
+# ===== FLUTTER / DART =====
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+*.apk
+*.ipa
 *.spec
-backend/.env*
-backend/.env
-*.log
-*.backup*
-*.original*
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
+/ios/Flutter/flutter_export_environment.sh
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ===== TEST & TEMP =====
+test_images/
+test.txt
+__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== MISC =====
+*.pid
+*.sock
+*.pid.lock
+*.seed
+*.pid.lock
+*.bak
+*.bak.*
+__pycache__/
+*.pyc
+backend/__pycache__/
+frontend/build/
+downloads/*.apk

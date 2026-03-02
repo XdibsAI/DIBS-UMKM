@@ -1,3 +1,4 @@
+from utils.errors import handle_errors, AuthError, ValidationError
 """Authentication Routes"""
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
@@ -17,6 +18,7 @@ def set_database(database):
     db = database
 
 @router.post("/register")
+@handle_errors
 async def register(user: UserCreate):
     """Register new user"""
     try:
@@ -57,6 +59,7 @@ async def register(user: UserCreate):
         raise HTTPException(500, str(e))
 
 @router.post("/login")
+@handle_errors
 async def login(credentials: UserLogin):
     """User login"""
     try:

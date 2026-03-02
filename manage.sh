@@ -254,7 +254,9 @@ restart() {
 
 # Build APK
 build() {
-    echo -e "\n${BLUE}📱 BUILDING APK...${NC}\n"
+    echo -e "
+${BLUE}📱 BUILDING APK...${NC}
+"
 
     cd "$FRONTEND_DIR"
 
@@ -271,14 +273,21 @@ build() {
 
     # Copy ke download folder
     mkdir -p "$DOWNLOAD_DIR"
+    
+    # Hapus symlink/file lama
+    rm -f "$DOWNLOAD_DIR/dibs1-latest.apk"
+    
+    # Copy file baru
     cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/dibs1-latest.apk"
     cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/dibs1-$(date +%Y%m%d-%H%M).apk"
 
     local size=$(du -h "$DOWNLOAD_DIR/dibs1-latest.apk" | cut -f1)
-    echo -e "\n${GREEN}✅ APK siap!${NC}"
+    echo -e "
+${GREEN}✅ APK siap!${NC}"
     echo -e "  📦 Ukuran: $size"
     echo -e "  📱 URL: http://$IP:$DOWNLOAD_PORT/dibs1-latest.apk"
-    echo -e "  💾 Backup: dibs1-$(date +%Y%m%d-%H%M).apk\n"
+    echo -e "  💾 Backup: dibs1-$(date +%Y%m%d-%H%M).apk
+"
 }
 
 # Logs dengan lebih detail

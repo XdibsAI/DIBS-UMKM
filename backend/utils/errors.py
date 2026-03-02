@@ -1,91 +1,90 @@
-from typing import Optional, Any
+"""
+Standard Error Handling untuk DIBS AI
+"""
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from functools import wraps
 import logging
+from typing import Callable, Type, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-class DibsError(Exception):
-    """Base exception class for DIBS"""
-    def __init__(self, message: str, code: str = "INTERNAL_ERROR", status_code: int = 500):
+class DibsException(Exception):
+    """Base exception untuk DIBS AI"""
+    def __init__(self, message: str, code: int = 400, details: Dict[str, Any] = None):
         self.message = message
         self.code = code
-        self.status_code = status_code
+        self.details = details or {}
         super().__init__(message)
 
-class VideoGenerationError(DibsError):
-    """Video generation specific errors"""
-    def __init__(self, message: str, project_id: Optional[str] = None):
-        super().__init__(
-            message=f"Video generation failed: {message}",
-            code="VIDEO_GEN_ERROR",
-            status_code=500
-        )
-        self.project_id = project_id
+class NotFoundError(DibsException):
+    """Resource tidak ditemukan"""
+    def __init__(self, message: str = "Resource tidak ditemukan", details: Dict[str, Any] = None):
+        super().__init__(message, 404, details)
 
-class DatabaseError(DibsError):
-    """Database operation errors"""
-    def __init__(self, message: str, query: Optional[str] = None):
-        super().__init__(
-            message=f"Database error: {message}",
-            code="DB_ERROR",
-            status_code=500
-        )
-        self.query = query
+class ValidationError(DibsException):
+    """Validasi input error"""
+    def __init__(self, message: str = "Data tidak valid", details: Dict[str, Any] = None):
+        super().__init__(message, 400, details)
 
-class ValidationError(DibsError):
-    """Input validation errors"""
-    def __init__(self, message: str, field: Optional[str] = None):
-        super().__init__(
-            message=f"Validation error: {message}",
-            code="VALIDATION_ERROR",
-            status_code=400
-        )
-        self.field = field
+class AuthError(DibsException):
+    """Authentication/Authorization error"""
+    def __init__(self, message: str = "Tidak memiliki akses", details: Dict[str, Any] = None):
+        super().__init__(message, 401, details)
 
-async def error_handler_middleware(request: Request, call_next):
-    """Global error handling middleware"""
-    try:
-        return await call_next(request)
-    except DibsError as e:
-        logger.error(f"DIBS Error: {e.message} (code: {e.code})")
-        return JSONResponse(
-            status_code=e.status_code,
-            content={
-                "error": {
-                    "code": e.code,
-                    "message": e.message,
-                    "details": getattr(e, "project_id", None) or getattr(e, "field", None) or getattr(e, "query", None)
-                }
-            }
-        )
-    except HTTPException as e:
-        return JSONResponse(
-            status_code=e.status_code,
-            content={"error": {"code": "HTTP_ERROR", "message": e.detail}}
-        )
-    except Exception as e:
-        logger.exception("Unhandled exception")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": {
-                    "code": "INTERNAL_ERROR",
-                    "message": "An unexpected error occurred"
-                }
-            }
-        )
+class DatabaseError(DibsException):
+    """Database operation error"""
+    def __init__(self, message: str = "Database error", details: Dict[str, Any] = None):
+        super().__init__(message, 500, details)
 
-def with_error_handling(func):
-    """Decorator for error handling in routes"""
+def handle_errors(func: Callable) -> Callable:
+    """Decorator untuk handle exceptions di routes"""
+    @wraps(func)
     async def wrapper(*args, **kwargs):
         try:
             return await func(*args, **kwargs)
-        except DibsError:
-            raise
-        except HTTPException:
-            raise
+        except DibsException as e:
+            logger.warning(f"DibsException: {e.message} (code: {e.code})")
+            return JSONResponse(
+                status_code=e.code,
+                content={
+                    "success": False,
+                    "error": e.message,
+                    "details": e.details
+                }
+            )
+        except HTTPException as e:
+            logger.warning(f"HTTPException: {e.detail}")
+            return JSONResponse(
+                status_code=e.status_code,
+                content={
+                    "success": False,
+                    "error": e.detail
+                }
+            )
         except Exception as e:
-            logger.exception(f"Error in {func.__name__}")
-            raise VideoGenerationError(str(e))
+            logger.error(f"Unexpected error: {str(e)}", exc_info=True)
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": "Internal server error",
+                    "detail": str(e) if logger.isEnabledFor(logging.DEBUG) else None
+                }
+            )
     return wrapper
+
+def with_transaction(func: Callable) -> Callable:
+    """Decorator untuk database transaction"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        # This will be implemented with database transaction
+        # For now, just pass through
+        return await func(*args, **kwargs)
+    return wrapper
+
+# Alias untuk backward compatibility
+with_error_handling = handle_errors
+
+# Alias for backward compatibility
+with_error_handling = handle_errors

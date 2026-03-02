@@ -49,7 +49,8 @@ class ChatProvider extends ChangeNotifier {
     try {
       final res = await ApiService.getChatSessions();
       if (res['status'] == 'success') {
-        _sessions = res['data'] ?? [];
+        _sessions = res['data']['data'] ?? [];
+        debugPrint('✅ Sessions loaded: ${_sessions.length}');
       }
     } catch (e) {
       _error = e.toString();
