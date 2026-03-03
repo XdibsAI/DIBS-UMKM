@@ -12,20 +12,35 @@ class TokoProvider extends ChangeNotifier {
     'total_products': 0,
     'low_stock': 0,
   };
-  
+
   bool _isLoading = false;
   String? _error;
+  
+  // Untuk mode inklusif
+  String _lastVoiceText = '';
+  bool _isInclusiveMode = false;
 
   // Getters
   List<Map<String, dynamic>> get products => _products;
   List<Map<String, dynamic>> get cartItems => _cartItems;
+  List<Map<String, dynamic>> get cart => _cartItems;
   List<Map<String, dynamic>> get recentSales => _recentSales;
   Map<String, dynamic> get dashboard => _dashboard;
   bool get isLoading => _isLoading;
   String? get error => _error;
   
+  // Inclusive mode getters
+  String get lastVoiceText => _lastVoiceText;
+  bool get isInclusiveMode => _isInclusiveMode;
+  
   int get cartTotal {
     return _cartItems.fold(0, (sum, item) => sum + (item['subtotal'] as int? ?? 0));
+  }
+  
+  // Inclusive mode methods
+  void setInclusiveMode(bool value) {
+    _isInclusiveMode = value;
+    notifyListeners();
   }
 
   // Load Dashboard
@@ -189,12 +204,15 @@ class TokoProvider extends ChangeNotifier {
 
   // Voice Scan Processing
   Future<void> processVoiceScan(String text) async {
+    _lastVoiceText = text;
+    notifyListeners();
+    
     try {
       final response = await ApiService.scanVoice(text, autoSave: false);
-      
+
       if (response['status'] == 'success') {
         final items = response['data']['items'] as List?;
-        
+
         if (items != null) {
           for (var item in items) {
             // Find product by name
@@ -204,14 +222,16 @@ class TokoProvider extends ChangeNotifier {
               ),
               orElse: () => {},
             );
-            
+
             if (product.isNotEmpty) {
               addToCart(product, item['quantity'] ?? 1);
             }
           }
         }
+        
+        debugPrint('✅ Voice scan berhasil: $text');
       }
-      
+
     } catch (e) {
       _error = e.toString();
       debugPrint('❌ Voice scan error: $e');

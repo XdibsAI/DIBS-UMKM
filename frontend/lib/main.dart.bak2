@@ -11,7 +11,6 @@ import 'providers/toko_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
-import 'widgets/toko/inclusive_checkout.dart';
 
 void main() {
   runApp(const DibsApp());

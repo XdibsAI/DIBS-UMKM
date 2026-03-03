@@ -172,6 +172,51 @@ static const String baseUrl = 'http://your-server:8081/api/v1';
 
 ---
 
+
+**Features;**
+## 🌟 Fitur Unggulan Baru
+
+### 🫱🏽‍🫲🏻 **Mode Inklusif (Untuk Tuna Rungu/Wicara)**
+*Belanja jadi lebih mudah untuk semua kalangan*
+
+| **Fitur** | **Deskripsi** |
+|-----------|---------------|
+| **Voice Scan** | Pembeli cukup bicara, sistem konversi ke teks |
+| **Auto-Cart** | Keranjang belanja terisi otomatis dari suara |
+| **Visual Total** | Total harga langsung terlihat di layar |
+| **Rincian Belanja** | Detail belanja bisa di-print atau diperlihatkan |
+| **Akses Mudah** | Ikon aksesibilitas di pojok kanan menu Toko |
+
+**Cara kerja:**
+1. Buka menu **Toko & Kasir**
+2. Klik ikon aksesibilitas 🫱🏽‍🫲🏼 di pojok kanan atas
+3. Klik **"MULAI SCAN SUARA"**
+4. Ucapkan atau ketik: `"2 keripik pisang 1 cireng"`
+5. Sistem otomatis:
+   - ✅ Menampilkan teks yang diucapkan
+   - ✅ Mengisi keranjang belanja
+   - ✅ Menghitung total harga
+6. Klik **"RINCIAN"** untuk melihat detail
+7. Klik **"SELESAI"** untuk checkout
+
+> ✨ **Dampak:** Membantu penyandang tuna rungu/wicara untuk berbelanja mandiri di UMKM
+
+---
+
+### 🤖 **Auto-Healer System** (Self-Healing AI)
+*Sistem otomatis yang menjaga aplikasi tetap sehat*
+
+| **Komponen** | **Fungsi** |
+|--------------|------------|
+| **Log Monitor** | Memantau log backend, download, dan MCP server |
+| **Error Detection** | Mendeteksi error pattern secara real-time |
+| **AI Analysis** | Menganalisis error dengan NVIDIA (fallback ke Ollama) |
+| **Auto-Fix** | Memberikan saran perbaikan otomatis |
+
+**Cara aktivasi:**
+```bash
+cd ~/dibs1
+nohup backend/venv/bin/python auto_healer_final.py > healer.log 2>&1 &
 ## 📖 Documentation
 
 - [Installation Guide](docs/INSTALLATION.md)
@@ -252,3 +297,5 @@ DIBS AI is open source and free to use. If you find it helpful:
 **Built with ❤️ for Indonesian UMKM**
 
 *Empowering small businesses with AI technology*
+
+
