@@ -1,0 +1,80 @@
+import os
+from pathlib import Path
+
+# Project root
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# --- Directories ---
+BACKEND_DIR = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = BACKEND_DIR.parent
+DATA_DIR = BACKEND_DIR / "data"
+UPLOADS_DIR = BACKEND_DIR / "uploads"
+VIDEOS_DIR = BACKEND_DIR / "videos"
+
+for d in [DATA_DIR, UPLOADS_DIR, VIDEOS_DIR]:
+    os.makedirs(d, exist_ok=True)
+
+# --- Server & DB ---
+HOST = "0.0.0.0"
+host = HOST
+PORT = 8081
+port = PORT
+# PUBLIC_URL ditambahkan di sini untuk video/vision_routes.py
+PUBLIC_URL = f"http://{HOST}:{PORT}" 
+public_url = PUBLIC_URL
+
+    DB_PATH: str = "/home/dibs/dibs1/data/dibs.db"
+    DB_PATH: str = "/home/dibs/dibs1/data/dibs.db"
+db_path = DATABASE_PATH
+data_dir = str(DATA_DIR)
+
+# --- AI & LLM (Ollama & NVIDIA) ---
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+ollama_url = OLLAMA_URL
+ollama_timeout = 60
+
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
+nvidia_api_key = NVIDIA_API_KEY
+use_nvidia = True if NVIDIA_API_KEY else False
+
+# Model Settings
+ai_model = "nemotron"
+nvidia_model = "meta/llama-3.1-70b-instruct"
+nvidia_max_tokens = 1024
+nvidia_temperature = 0.7
+
+# --- Security (JWT) ---
+SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-dibs-999")
+jwt_secret_key = SECRET_KEY
+ALGORITHM = "HS256"
+jwt_algorithm = ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = 10080
+
+# --- Video Editor Settings ---
+ENABLE_VIDEO_GENERATION = True
+enable_video_generation = True
+VIDEO_SERVER_URL = "http://localhost:8081"
+video_server_url = VIDEO_SERVER_URL
+VIDEO_OUTPUT_PATH = str(VIDEOS_DIR)
+
+# --- Features ---
+ENABLE_REMINDERS = True
+enable_reminders = True
+
+# --- Settings Object (Nggo main.py) ---
+class Settings:
+    def __init__(self):
+    DB_PATH: str = "/home/dibs/dibs1/data/dibs.db"
+        self.db_path = db_path
+        self.UPLOADS_DIR = UPLOADS_DIR
+        self.VIDEOS_DIR = VIDEOS_DIR
+        self.BACKEND_DIR = BACKEND_DIR
+        self.DATA_DIR = DATA_DIR
+        self.OLLAMA_URL = OLLAMA_URL
+        self.ENABLE_REMINDERS = ENABLE_REMINDERS
+        self.HOST = HOST
+        self.PORT = PORT
+        self.VIDEO_SERVER_URL = VIDEO_SERVER_URL
+        self.PUBLIC_URL = PUBLIC_URL
+
+settings = Settings()

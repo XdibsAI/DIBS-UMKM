@@ -1,3 +1,4 @@
+import '../toko/voice_scan_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -1183,6 +1184,28 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         ),
                         onPressed: _showAttachmentMenu,
                         tooltip: 'Upload file',
+                        padding: const EdgeInsets.all(8),
+                      ),
+                      // 🎤 Voice input button by Dibs
+                      IconButton(
+                        icon: Icon(
+                          Icons.mic_rounded,
+                          color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                          size: 24,
+                        ),
+                        onPressed: () async {
+                          final result = await showModalBottomSheet<String>(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) => VoiceScanDialog(),
+                          );
+                          if (result != null && result.isNotEmpty) {
+                            _messageController.text = result;
+                            _onSend(); 
+                          }
+                        },
+                        tooltip: 'Kirim pesan suara',
                         padding: const EdgeInsets.all(8),
                       ),
                       const SizedBox(width: 4),

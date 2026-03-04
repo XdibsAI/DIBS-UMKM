@@ -11,7 +11,6 @@ class ChatProvider extends ChangeNotifier {
   bool _isThinking = false;
   String _thinkingText = '';
   String? _error;
-  bool _useNvidia = false;
 
   List<dynamic> get sessions => _sessions;
   List<ChatMessage> get messages => _messages;
@@ -22,14 +21,11 @@ class ChatProvider extends ChangeNotifier {
   String get thinkingText => _thinkingText;
   String? get error => _error;
 
-  bool hasValidSession() {
-    return _currentSession != null && _currentSession!['session_id'] != null;
-  }
+  bool hasValidSession() => _currentSession != null && _currentSession!['session_id'] != null;
 
   Future<void> initializeUserSession() async {
     _isLoading = true;
     notifyListeners();
-
     try {
       await loadSessions();
       if (_sessions.isEmpty) {
@@ -50,11 +46,8 @@ class ChatProvider extends ChangeNotifier {
       final res = await ApiService.getChatSessions();
       if (res['status'] == 'success') {
         _sessions = res['data']['data'] ?? [];
-        debugPrint('✅ Sessions loaded: ${_sessions.length}');
       }
-    } catch (e) {
-      _error = e.toString();
-    }
+    } catch (e) { _error = e.toString(); }
     notifyListeners();
   }
 
@@ -65,42 +58,60 @@ class ChatProvider extends ChangeNotifier {
         await loadSessions();
         await loadSession(res['data']['session_id']);
       }
-    } catch (e) {
-      _error = e.toString();
-    }
+    } catch (e) { _error = e.toString(); }
     notifyListeners();
   }
 
   Future<void> loadSession(String sessionId) async {
     _isLoading = true;
     notifyListeners();
-
     try {
       final res = await ApiService.getChatSession(sessionId);
       if (res['status'] == 'success') {
         _currentSession = res['data'];
-        
-        // Parse messages
         final List<dynamic> messagesData = res['data']['messages'] ?? [];
-        _messages = messagesData.map((m) {
-          return ChatMessage(
-            content: m['content'] ?? '',
-            role: m['role'] ?? 'assistant',
-            timestamp: DateTime.parse(m['created_at'] ?? DateTime.now().toIso8601String()),
-          );
-        }).toList();
+        _messages = messagesData.map((m) => ChatMessage(
+          content: m['content'] ?? '',
+          role: m['role'] ?? 'assistant',
+          timestamp: DateTime.parse(m['created_at'] ?? DateTime.now().toIso8601String()),
+        )).toList();
       }
-    } catch (e) {
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
+    } catch (e) { _error = e.toString(); }
+    finally { _isLoading = false; notifyListeners(); }
   }
 
   Future<bool> sendMessage(String text) async {
-    if (_currentSession == null) return false;
+    // === DIBS SMART INTERCEPTOR ===
+    final lowerText = text.toLowerCase();
+    
+    // 1. Logic Simpan
+    if (lowerText.contains('simpan dulu')) {
+      final contentToSave = text.replaceAll(RegExp(r'(?i)simpan dulu'), '').trim();
+      if (contentToSave.isNotEmpty) {
+        await ApiService.createKnowledge({'content': contentToSave, 'category': 'manual'});
+      }
+    }
 
+    // 2. Logic Recall (Flexible & Smart)
+    final recallMatch = RegExp(r'(munculkan|tampilkan|lihat|cek|buka|mana)\s+(knowledge|catatan|info)(?:\s+(?:tentang|soal|mengenai)\s+(.+))?').firstMatch(lowerText);
+    if (recallMatch != null) {
+      final query = recallMatch.group(3);
+      final res = await ApiService.getKnowledge();
+      if (res['status'] == 'success') {
+        List data = res['data'] ?? [];
+        if (query != null && query.isNotEmpty) {
+          data = data.where((e) => e['content'].toString().toLowerCase().contains(query.toLowerCase())).toList();
+        }
+        if (data.isNotEmpty) {
+          final summary = data.take(10).map((e) => "- ${e['content']}").join('\n');
+          text = "User ingin melihat knowledge ${query ?? 'terbaru'}. Datanya:\n$summary\n\nTolong rangkum dengan gaya bahasa Dibs.";
+        } else {
+          text = "Knowledge tentang '$query' tidak ditemukan. Beritahu user dengan santai.";
+        }
+      }
+    }
+
+    if (_currentSession == null) return false;
     _isSending = true;
     _isThinking = true;
     _thinkingText = 'Sedang mengetik...';
@@ -108,42 +119,24 @@ class ChatProvider extends ChangeNotifier {
 
     try {
       final res = await ApiService.sendChatMessage(_currentSession!['session_id'], text);
-
       if (res['status'] == 'success') {
-        // User message (dibuat manual)
-        final userMessage = ChatMessage(
-          content: text,
-          role: 'user',
-          timestamp: DateTime.now(),
-        );
-        _messages.add(userMessage);
-
-        // Assistant message dari response
+        _messages.add(ChatMessage(content: text, role: 'user', timestamp: DateTime.now()));
         final assistantData = res['data']['assistant_message'];
-        final assistantMessage = ChatMessage(
+        _messages.add(ChatMessage(
           content: assistantData['content'],
           role: assistantData['role'],
           timestamp: DateTime.parse(assistantData['created_at']),
-        );
-        _messages.add(assistantMessage);
-
-        _isSending = false;
-        _isThinking = false;
-        notifyListeners();
+        ));
         return true;
-      } else {
-        _error = res['message'] ?? 'Gagal mengirim pesan';
-        _isSending = false;
-        _isThinking = false;
-        notifyListeners();
-        return false;
       }
+      return false;
     } catch (e) {
       _error = e.toString();
+      return false;
+    } finally {
       _isSending = false;
       _isThinking = false;
       notifyListeners();
-      return false;
     }
   }
 
@@ -159,13 +152,8 @@ class ChatProvider extends ChangeNotifier {
         return true;
       }
       return false;
-    } catch (e) {
-      _error = e.toString();
-      return false;
-    }
+    } catch (e) { return false; }
   }
 
-  void silentWarmup() {
-    // Implementasi warmup
-  }
+  Future<void> silentWarmup() async {}
 }

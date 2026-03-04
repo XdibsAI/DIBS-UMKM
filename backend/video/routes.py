@@ -23,6 +23,9 @@ def set_database(database):
 def set_video_agent(agent):
     global video_agent
 router = APIRouter(prefix="/api/v1/video", tags=["Video"])
+
+# Simple transaction manager placeholder
+tx_manager = None  # TODO: Implement proper transaction manager
 logger = logging.getLogger(__name__)
 
 class ScriptData(BaseModel):
@@ -79,20 +82,21 @@ async def generate_video(
     
     # Import here to avoid circular imports
     from video.generator import video_generator
-    
+    from video.pipeline import VideoPipeline
+
     # Create pipeline with generator
     pipeline = VideoPipeline(tx_manager, video_generator)
-    
+
     # Create project
     project_id = await pipeline.create_project(script_data.dict())
-    
+
     # Start background processing
     background_tasks.add_task(
-        pipeline.process_project,
-        project_id,
-        script_data.dict()
+    pipeline.process_project,
+    project_id,
+    script_data.dict()
     )
-    
+
     return VideoResponse(
         success=True,
         project_id=project_id,

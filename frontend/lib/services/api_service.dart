@@ -137,6 +137,10 @@ class ApiService {
     return _get('/knowledge');
   }
 
+  static Future<Map<String, dynamic>> createKnowledge(Map<String, dynamic> data) async {
+    return _post('/knowledge', data);
+  }
+
   static Future<Map<String, dynamic>> generateKnowledgeReport({required String period}) async {
     return _post('/knowledge/report', {'period': period});
   }

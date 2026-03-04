@@ -1,265 +1,92 @@
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
 
 class TokoProvider extends ChangeNotifier {
-  // Data
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _cartItems = [];
-  List<Map<String, dynamic>> _recentSales = [];
-  Map<String, dynamic> _dashboard = {
-    'today_sales': 0,
-    'today_transactions': 0,
-    'total_products': 0,
-    'low_stock': 0,
-  };
-
   bool _isLoading = false;
-  String? _error;
-  
-  // Untuk mode inklusif
-  String _lastVoiceText = '';
-  bool _isInclusiveMode = false;
+  String _lastVoiceText = "";
 
-  // Getters
   List<Map<String, dynamic>> get products => _products;
   List<Map<String, dynamic>> get cartItems => _cartItems;
-  List<Map<String, dynamic>> get cart => _cartItems;
-  List<Map<String, dynamic>> get recentSales => _recentSales;
-  Map<String, dynamic> get dashboard => _dashboard;
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-  
-  // Inclusive mode getters
   String get lastVoiceText => _lastVoiceText;
-  bool get isInclusiveMode => _isInclusiveMode;
-  
-  int get cartTotal {
-    return _cartItems.fold(0, (sum, item) => sum + (item['subtotal'] as int? ?? 0));
-  }
-  
-  // Inclusive mode methods
-  void setInclusiveMode(bool value) {
-    _isInclusiveMode = value;
-    notifyListeners();
-  }
+  double get cartTotal => _cartItems.fold(0, (sum, item) => sum + (item['subtotal'] as num).toDouble());
 
-  // Load Dashboard
-  Future<void> loadDashboard() async {
-    _isLoading = true;
-    notifyListeners();
+  static const String apiUrl = 'http://94.100.26.128:8081/api/v1';
 
+  // --- CEK KONEKSI & LOAD DATA ---
+  Future<void> loadProducts() async {
+    print("🔍 [Dibs-Log] Mencoba tarik data produk dari: $apiUrl/products");
     try {
-      final response = await ApiService.getTokoDashboard();
-      
-      if (response['status'] == 'success') {
-        _dashboard = response['data'] ?? _dashboard;
+      final response = await http.get(Uri.parse('$apiUrl/products'));
+      print("📡 [Dibs-Log] Status Code API: ${response.statusCode}");
+      if (response.statusCode == 200) {
+        _products = (json.decode(response.body) as List).cast<Map<String, dynamic>>();
+        print("📦 [Dibs-Log] Berhasil muat ${_products.length} produk dari database.");
       }
-      
-      // Load recent sales
-      final salesResponse = await ApiService.getTokoSales(limit: 5);
-      if (salesResponse['status'] == 'success') {
-        _recentSales = List<Map<String, dynamic>>.from(salesResponse['data'] ?? []);
-      }
-      
     } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Load dashboard error: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      print("❌ [Dibs-Log] ERROR KONEKSI: $e");
     }
-  }
-
-  // Load Products
-  Future<void> loadProducts({String? category}) async {
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      final response = await ApiService.getTokoProducts(category: category);
-      
-      if (response['status'] == 'success') {
-        _products = List<Map<String, dynamic>>.from(response['data'] ?? []);
-      }
-      
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Load products error: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  // Search Products
-  void searchProducts(String query) {
-    if (query.isEmpty) {
-      loadProducts();
-      return;
-    }
-    
-    _products = _products.where((p) {
-      final name = (p['name'] ?? '').toString().toLowerCase();
-      return name.contains(query.toLowerCase());
-    }).toList();
-    
     notifyListeners();
   }
 
-  // Add Product
+  // --- SIMPAN KE DATABASE ---
   Future<void> addProduct(Map<String, dynamic> data) async {
+    print("🚀 [Dibs-Log] Mengirim produk baru ke database: ${data['name']}");
     try {
-      final response = await ApiService.createTokoProduct(data);
-      
-      if (response['status'] == 'success') {
+      final response = await http.post(
+        Uri.parse('$apiUrl/products'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(data),
+      );
+      print("📡 [Dibs-Log] Respon Server: ${response.statusCode}");
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("✅ [Dibs-Log] Produk Tersimpan!");
         await loadProducts();
       }
-      
     } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Add product error: $e');
+      print("❌ [Dibs-Log] GAGAL SIMPAN: $e");
     }
   }
 
-  // Update Product
-  Future<void> updateProduct(int productId, Map<String, dynamic> data) async {
-    try {
-      final response = await ApiService.updateTokoProduct(productId.toString(), data);
-      
-      if (response['status'] == 'success') {
-        await loadProducts();
-      }
-      
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Update product error: $e');
-    }
-  }
-
-  // Delete Product
-  Future<void> deleteProduct(int productId) async {
-    try {
-      final response = await ApiService.deleteTokoProduct(productId.toString());
-      
-      if (response['status'] == 'success') {
-        _products.removeWhere((p) => p['id'] == productId);
-        notifyListeners();
-      }
-      
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Delete product error: $e');
-    }
-  }
-
-  // Cart Operations
-  void addToCart(Map<String, dynamic> product, int quantity) {
-    final existingIndex = _cartItems.indexWhere((item) => item['id'] == product['id']);
+  // --- VOICE LOGIC ---
+  Future<void> processVoiceCommand(String command) async {
+    print("🎙️ [Dibs-Log] Voice Diterima: '$command'");
+    _lastVoiceText = command;
     
-    if (existingIndex >= 0) {
-      _cartItems[existingIndex]['quantity'] += quantity;
-      _cartItems[existingIndex]['subtotal'] = 
-          _cartItems[existingIndex]['quantity'] * _cartItems[existingIndex]['price'];
-    } else {
-      _cartItems.add({
-        'id': product['id'],
-        'name': product['name'],
-        'price': product['price'],
-        'quantity': quantity,
-        'subtotal': product['price'] * quantity,
-      });
+    if (_products.isEmpty) {
+      print("⚠️ [Dibs-Log] Daftar produk kosong, menarik data dulu...");
+      await loadProducts();
     }
-    
+
+    String cleanCommand = command.toLowerCase();
+    bool found = false;
+
+    for (var product in _products) {
+      String pName = product['name'].toString().toLowerCase();
+      if (cleanCommand.contains(pName)) {
+        print("🎯 [Dibs-Log] MATCH! Menambah $pName ke keranjang.");
+        addToCart(product, 1);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) print("❓ [Dibs-Log] Produk tidak ditemukan untuk suara: '$command'");
     notifyListeners();
   }
 
-  void incrementCartItem(int productId) {
-    final index = _cartItems.indexWhere((item) => item['id'] == productId);
-    if (index >= 0) {
-      _cartItems[index]['quantity']++;
-      _cartItems[index]['subtotal'] = 
-          _cartItems[index]['quantity'] * _cartItems[index]['price'];
-      notifyListeners();
-    }
-  }
-
-  void decrementCartItem(int productId) {
-    final index = _cartItems.indexWhere((item) => item['id'] == productId);
-    if (index >= 0) {
-      if (_cartItems[index]['quantity'] > 1) {
-        _cartItems[index]['quantity']--;
-        _cartItems[index]['subtotal'] = 
-            _cartItems[index]['quantity'] * _cartItems[index]['price'];
-      } else {
-        _cartItems.removeAt(index);
-      }
-      notifyListeners();
-    }
-  }
-
-  void clearCart() {
-    _cartItems.clear();
+  void addToCart(Map<String, dynamic> product, int qty) {
+    _cartItems.add({
+      'id': product['id'],
+      'name': product['name'],
+      'quantity': qty,
+      'price': product['price'],
+      'subtotal': qty * (double.tryParse(product['price'].toString()) ?? 0),
+    });
     notifyListeners();
   }
-
-  // Voice Scan Processing
-  Future<void> processVoiceScan(String text) async {
-    _lastVoiceText = text;
-    notifyListeners();
-    
-    try {
-      final response = await ApiService.scanVoice(text, autoSave: false);
-
-      if (response['status'] == 'success') {
-        final items = response['data']['items'] as List?;
-
-        if (items != null) {
-          for (var item in items) {
-            // Find product by name
-            final product = _products.firstWhere(
-              (p) => p['name'].toString().toLowerCase().contains(
-                item['name'].toString().toLowerCase()
-              ),
-              orElse: () => {},
-            );
-
-            if (product.isNotEmpty) {
-              addToCart(product, item['quantity'] ?? 1);
-            }
-          }
-        }
-        
-        debugPrint('✅ Voice scan berhasil: $text');
-      }
-
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Voice scan error: $e');
-    }
-  }
-
-  // Checkout
-  Future<bool> checkout() async {
-    try {
-      final saleData = {
-        'items': _cartItems,
-        'total': cartTotal,
-        'created_at': DateTime.now().toIso8601String(),
-      };
-      
-      final response = await ApiService.createTokoSale(saleData);
-      
-      if (response['status'] == 'success') {
-        clearCart();
-        await loadDashboard();
-        return true;
-      }
-      
-      return false;
-    } catch (e) {
-      _error = e.toString();
-      debugPrint('❌ Checkout error: $e');
-      return false;
-    }
-  }
+  
+  void clearCart() { _cartItems.clear(); notifyListeners(); }
 }

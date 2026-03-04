@@ -4,6 +4,12 @@ Version 2.0.0
 """
 import sys
 import os
+
+# Calculate project root (go up from backend/)
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).parent.parent  # /home/dibs/dibs1
+DATA_DIR = PROJECT_ROOT / "data"
+DB_PATH = DATA_DIR / "dibs.db"
 from pathlib import Path
 
 # Add current directory to Python path
@@ -38,8 +44,9 @@ from video.routes import router as video_router, set_database as set_video_db, s
 from video.vision_routes import router as vision_router
 
 # ===== TOKO MODULE =====
-from toko.database import TokoDatabase
+# from toko.database import TokoDatabase
 from toko.routes import router as toko_router, set_database as set_toko_db
+from social.routes import router as social_router, set_database as set_social_db
 from nvidia_routes import router as nvidia_router
 # Try import dibs_routes, but don't fail if not exists
 try:
@@ -61,22 +68,18 @@ async def lifespan(app: FastAPI):
     global db, toko_db, video_agent, language_ai
 
     logger.info("🚀 Starting DIBS AI v2.0.0 (Modular Architecture)")
-    logger.info(f"📁 Using database: {settings.DB_PATH}")
+    logger.info(f"📁 Using database: {str(DB_PATH)}")
     logger.info(f"📁 Uploads: {settings.UPLOADS_DIR}")
     logger.info(f"📁 Videos: {settings.VIDEOS_DIR}")
 
     # ===== INITIALIZE MAIN DATABASE =====
-    db = DatabaseManager(str(settings.DB_PATH))
+    db = DatabaseManager(str(str(DB_PATH)))
     await db.connect()
     logger.info("✅ Main database connected")
 
-    # ===== INITIALIZE TOKO DATABASE =====
-    # Use separate database file for toko (for now, will merge later)
-    toko_db_path = settings.BACKEND_DIR / "toko.db"
-    toko_db = TokoDatabase(str(toko_db_path))
-    await toko_db.connect()
-    await toko_db.init_db()
-    logger.info(f"✅ Toko database connected: {toko_db_path}")
+    # ===== TOKO MODULE (Centralized) =====
+    toko_db = db  # Menggunakan database utama
+    logger.info("✅ Toko module redirected to main database")
 
     # ===== INITIALIZE OTHER COMPONENTS =====
     video_agent = initialize_video_agent(db, settings.OLLAMA_URL)
@@ -88,7 +91,7 @@ async def lifespan(app: FastAPI):
     set_knowledge_db(db)
     set_video_db(db)
     set_video_agent(video_agent)
-    set_toko_db(toko_db)
+    set_toko_db(db)
 
     logger.info("✅ All modules initialized")
 
@@ -129,7 +132,7 @@ async def lifespan(app: FastAPI):
 
     # ===== CLEANUP =====
     await db.close()
-    await toko_db.close()
+    # await toko_db.close() (Shared with main db)
     logger.info("👋 DIBS AI stopped")
 
 # Create FastAPI app
@@ -158,6 +161,7 @@ app.include_router(knowledge_router)
 app.include_router(video_router)
 app.include_router(vision_router)
 app.include_router(toko_router)
+app.include_router(social_router)
 app.include_router(nvidia_router)
 if dibs_router_available:
     app.include_router(dibs_router)
@@ -199,8 +203,8 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
         app,
-        host=settings.HOST,
-        port=settings.PORT,
+        host=HOST,
+        port=PORT,
         log_level="info"
     )
 

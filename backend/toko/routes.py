@@ -1,321 +1,114 @@
-"""Toko & Kasir Routes"""
-from fastapi import APIRouter, HTTPException, Depends
-from datetime import datetime, timedelta
-import logging
-import re
-from typing import List, Dict
+from fastapi import APIRouter, Depends, HTTPException
+from typing import List, Dict, Optional
+from auth.routes import get_current_user, TokenData
+from config.logging import logger
 
-from auth.utils import get_current_user, TokenData
+router = APIRouter(prefix="/api/v1/toko", tags=["toko"])
 
-router = APIRouter(prefix="/api/v1/toko", tags=["Toko"])
-logger = logging.getLogger('DIBS1')
-
-# Database will be injected
 db = None
 
 def set_database(database):
     global db
     db = database
 
-# ============ DASHBOARD ============
-
 @router.get("/dashboard")
 async def get_dashboard(current_user: TokenData = Depends(get_current_user)):
-    """Get toko dashboard summary"""
     try:
-        today = datetime.now().date()
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
         
-        # Today's sales
-        today_sales = await db.fetch_all(
-            "SELECT * FROM toko_sales WHERE user_id = ? AND DATE(created_at) = ?",
-            (current_user.user_id, today.isoformat())
-        )
+        # Total Products
+        res = await db.fetch_all("SELECT COUNT(*) as total FROM toko_products WHERE user_id = ?", (u_id,))
+        total_products = res[0]['total'] if res else 0
         
-        total_today = sum(sale['total'] for sale in today_sales)
-        
-        # Total products
-        products = await db.fetch_all(
-            "SELECT * FROM toko_products WHERE user_id = ?",
-            (current_user.user_id,)
-        )
-        
-        # Low stock products
-        low_stock = [p for p in products if p['stock'] < 10]
+        # Today Sales (Placeholder logic)
+        res_sales = await db.fetch_all("SELECT SUM(total) as total FROM toko_sales WHERE user_id = ? AND date(created_at) = date('now')", (u_id,))
+        today_sales = res_sales[0]['total'] if res_sales and res_sales[0]['total'] else 0
         
         return {
             "status": "success",
             "data": {
-                "today_sales": total_today,
-                "today_transactions": len(today_sales),
-                "total_products": len(products),
-                "low_stock": len(low_stock),
+                "today_sales": today_sales,
+                "today_transactions": 0,
+                "total_products": total_products,
+                "low_stock": 0
             }
         }
     except Exception as e:
         logger.error(f"Dashboard error: {e}")
-        raise HTTPException(500, str(e))
-
-# ============ PRODUCTS ============
+        return {"status": "error", "message": str(e)}
 
 @router.get("/products")
-async def get_products(
-    category: str = None,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Get all products"""
+async def get_products(current_user: TokenData = Depends(get_current_user)):
     try:
-        if category:
-            products = await db.fetch_all(
-                "SELECT * FROM toko_products WHERE user_id = ? AND category = ? ORDER BY name",
-                (current_user.user_id, category)
-            )
-        else:
-            products = await db.fetch_all(
-                "SELECT * FROM toko_products WHERE user_id = ? ORDER BY name",
-                (current_user.user_id,)
-            )
-        
-        return {
-            "status": "success",
-            "data": [dict(p) for p in products]
-        }
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
+        products = await db.fetch_all("SELECT * FROM toko_products WHERE user_id = ?", (u_id,))
+        return {"status": "success", "data": [dict(p) for p in products]}
     except Exception as e:
         logger.error(f"Get products error: {e}")
         raise HTTPException(500, str(e))
 
 @router.post("/products")
-async def create_product(
-    data: Dict,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Create new product"""
+async def create_product(data: Dict, current_user: TokenData = Depends(get_current_user)):
     try:
-        import uuid
-        product_id = str(uuid.uuid4())
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
         
-        await db.execute(
-            """INSERT INTO toko_products 
-               (id, user_id, name, price, stock, category, created_at) 
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (
-                product_id,
-                current_user.user_id,
-                data.get('name'),
-                data.get('price', 0),
-                data.get('stock', 0),
-                data.get('category', 'general'),
-                datetime.now().isoformat()
-            )
-        )
+        # Explicit Casting to prevent Database Mismatch
+        name = str(data.get('name', 'Produk Baru'))
+        price = float(data.get('price', 0.0))
+        stock = int(data.get('stock', 0))
+        category = str(data.get('category', 'Umum'))
+        description = str(data.get('description', ''))
+
         
-        logger.info(f"✅ Product created: {data.get('name')}")
-        return {"status": "success", "data": {"id": product_id}}
+        # DEBUG TIPE DATA
+        print(f"DEBUG: u_id={type(u_id)} value={u_id}")
+        print(f"DEBUG: name={type(name)} value={name}")
+        print(f"DEBUG: price={type(price)} value={price}")
+        print(f"DEBUG: stock={type(stock)} value={stock}")
         
+        query = "INSERT INTO toko_products (user_id, name, price, stock, category, description) VALUES (?, ?, ?, ?, ?, ?)"
+
+        values = (u_id, name, price, stock, category, description)
+        
+        await db.execute(query, values)
+        return {"status": "success", "message": "Product created successfully"}
     except Exception as e:
         logger.error(f"Create product error: {e}")
-        raise HTTPException(500, str(e))
-
-@router.put("/products/{product_id}")
-async def update_product(
-    product_id: str,
-    data: Dict,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Update product"""
-    try:
-        await db.execute(
-            """UPDATE toko_products 
-               SET name = ?, price = ?, stock = ?, category = ?
-               WHERE id = ? AND user_id = ?""",
-            (
-                data.get('name'),
-                data.get('price'),
-                data.get('stock'),
-                data.get('category', 'general'),
-                product_id,
-                current_user.user_id
-            )
-        )
-        
-        logger.info(f"✅ Product updated: {product_id}")
-        return {"status": "success"}
-        
-    except Exception as e:
-        logger.error(f"Update product error: {e}")
-        raise HTTPException(500, str(e))
+        raise HTTPException(400, f"Error: {str(e)}")
 
 @router.delete("/products/{product_id}")
-async def delete_product(
-    product_id: str,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Delete product"""
+async def delete_product(product_id: int, current_user: TokenData = Depends(get_current_user)):
     try:
-        await db.execute(
-            "DELETE FROM toko_products WHERE id = ? AND user_id = ?",
-            (product_id, current_user.user_id)
-        )
-        
-        logger.info(f"🗑️ Product deleted: {product_id}")
-        return {"status": "success"}
-        
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
+        await db.execute("DELETE FROM toko_products WHERE id = ? AND user_id = ?", (product_id, u_id))
+        return {"status": "success", "message": "Product deleted"}
     except Exception as e:
-        logger.error(f"Delete product error: {e}")
-        raise HTTPException(500, str(e))
-
-# ============ VOICE SCAN ============
-
-@router.post("/scan-voice")
-async def scan_voice(
-    data: Dict,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Parse voice/text input for kasir"""
-    try:
-        text = data.get('text', '').lower()
-        
-        # Simple parser - detect products & quantities
-        # Format: "beli mie goreng 2, teh botol 1"
-        
-        items = []
-        not_found = []
-        
-        # Split by comma
-        parts = text.split(',')
-        
-        for part in parts:
-            # Extract quantity (angka or kata)
-            quantity = 1
-            
-            # Check for numbers
-            numbers = re.findall(r'\d+', part)
-            if numbers:
-                quantity = int(numbers[-1])  # Last number is quantity
-            else:
-                # Check for Indonesian number words
-                if 'satu' in part or 'siji' in part:
-                    quantity = 1
-                elif 'dua' in part or 'loro' in part:
-                    quantity = 2
-                elif 'tiga' in part or 'telu' in part:
-                    quantity = 3
-                elif 'empat' in part or 'papat' in part:
-                    quantity = 4
-                elif 'lima' in part or 'limo' in part:
-                    quantity = 5
-            
-            # Remove quantity from text to get product name
-            product_text = re.sub(r'\d+', '', part)
-            product_text = re.sub(r'(satu|dua|tiga|empat|lima|siji|loro|telu|papat|limo)', '', product_text)
-            product_text = re.sub(r'(beli|tuku|ambil)', '', product_text)
-            product_text = product_text.strip()
-            
-            if not product_text:
-                continue
-            
-            # Search product in database
-            products = await db.fetch_all(
-                "SELECT * FROM toko_products WHERE user_id = ? AND LOWER(name) LIKE ?",
-                (current_user.user_id, f'%{product_text}%')
-            )
-            
-            if products:
-                product = dict(products[0])
-                items.append({
-                    'id': product['id'],
-                    'name': product['name'],
-                    'price': product['price'],
-                    'quantity': quantity,
-                    'subtotal': product['price'] * quantity
-                })
-            else:
-                not_found.append(product_text)
-        
-        preview = f"Terdeteksi: {len(items)} produk"
-        if not_found:
-            preview += f", {len(not_found)} tidak ditemukan"
-        
-        return {
-            "status": "success",
-            "data": {
-                "items": items,
-                "not_found": not_found,
-                "preview": preview
-            }
-        }
-        
-    except Exception as e:
-        logger.error(f"Voice scan error: {e}")
-        raise HTTPException(500, str(e))
-
-# ============ SALES ============
-
-@router.get("/sales")
-async def get_sales(
-    limit: int = 10,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Get recent sales"""
-    try:
-        sales = await db.fetch_all(
-            """SELECT * FROM toko_sales 
-               WHERE user_id = ? 
-               ORDER BY created_at DESC 
-               LIMIT ?""",
-            (current_user.user_id, limit)
-        )
-        
-        return {
-            "status": "success",
-            "data": [dict(s) for s in sales]
-        }
-    except Exception as e:
-        logger.error(f"Get sales error: {e}")
         raise HTTPException(500, str(e))
 
 @router.post("/sales")
-async def create_sale(
-    data: Dict,
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Create new sale transaction"""
+async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_user)):
     try:
-        import uuid
+        import uuid, json
+        from datetime import datetime
+        u_id = str(getattr(current_user, "id", getattr(current_user, "user_id", "0")))
         sale_id = str(uuid.uuid4())
-        
-        items = data.get('items', [])
-        total = data.get('total', 0)
-        
-        # Save sale
-        await db.execute(
-            """INSERT INTO toko_sales 
-               (id, user_id, items, total, created_at) 
-               VALUES (?, ?, ?, ?, ?)""",
-            (
-                sale_id,
-                current_user.user_id,
-                str(items),  # JSON string
-                total,
-                datetime.now().isoformat()
-            )
-        )
-        
-        # Update stock
-        for item in items:
-            await db.execute(
-                "UPDATE toko_products SET stock = stock - ? WHERE id = ?",
-                (item['quantity'], item['id'])
-            )
-        
-        logger.info(f"✅ Sale created: Rp {total}")
-        return {
-            "status": "success",
-            "data": {
-                "transaction_id": sale_id,
-                "total": total
-            }
-        }
-        
+        total = int(data.get("total", 0))
+        items_raw = data.get("items", "[]")
+        items_list = json.loads(items_raw) if isinstance(items_raw, str) else items_raw
+        created_at = datetime.now().isoformat()
+
+        # 1. Simpan Penjualan
+        await db.execute("INSERT INTO toko_sales (id, user_id, total, items, created_at) VALUES (?, ?, ?, ?, ?)", 
+                         (sale_id, u_id, total, str(items_raw), created_at))
+
+        # 2. Update Stok (Looping items)
+        for item in items_list:
+            p_id = item.get("id")
+            qty = int(item.get("qty", 0))
+            if p_id:
+                await db.execute("UPDATE toko_products SET stock = stock - ? WHERE id = ? AND user_id = ?", (qty, p_id, u_id))
+
+        return {"status": "success", "message": "Sale recorded & stock updated", "sale_id": sale_id}
     except Exception as e:
-        logger.error(f"Create sale error: {e}")
-        raise HTTPException(500, str(e))
+        logger.error(f"Sale Error: {e}")
+        raise HTTPException(400, f"Gagal transaksi: {str(e)}")
