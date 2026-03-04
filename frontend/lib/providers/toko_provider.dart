@@ -1,92 +1,172 @@
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter/material.dart';
 
 class TokoProvider extends ChangeNotifier {
+  static const String _baseUrl = 'http://94.100.26.128:8081/api/v1/toko';
+  
+  String? _authToken;
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _cartItems = [];
+  List<Map<String, dynamic>> _recentSales = [];
+  Map<String, dynamic> _dashboard = {};
   bool _isLoading = false;
-  String _lastVoiceText = "";
+  String _lastVoiceText = '';
 
+  // Getters
   List<Map<String, dynamic>> get products => _products;
   List<Map<String, dynamic>> get cartItems => _cartItems;
+  List<Map<String, dynamic>> get cart => _cartItems;
+  List<Map<String, dynamic>> get recentSales => _recentSales;
+  Map<String, dynamic> get dashboard => _dashboard;
+  bool get isLoading => _isLoading;
   String get lastVoiceText => _lastVoiceText;
-  double get cartTotal => _cartItems.fold(0, (sum, item) => sum + (item['subtotal'] as num).toDouble());
+  
+  int get cartTotal => _cartItems.fold(0, (sum, item) => sum + (item['subtotal'] as int? ?? 0));
 
-  static const String apiUrl = 'http://94.100.26.128:8081/api/v1';
+  void setAuthToken(String token) {
+    _authToken = token;
+  }
 
-  // --- CEK KONEKSI & LOAD DATA ---
-  Future<void> loadProducts() async {
-    print("🔍 [Dibs-Log] Mencoba tarik data produk dari: $apiUrl/products");
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    if (_authToken != null) 'Authorization': 'Bearer $_authToken',
+  };
+
+  Future<void> loadDashboard() async {
+    _isLoading = true;
+    notifyListeners();
     try {
-      final response = await http.get(Uri.parse('$apiUrl/products'));
-      print("📡 [Dibs-Log] Status Code API: ${response.statusCode}");
+      final response = await http.get(Uri.parse('$_baseUrl/dashboard'), headers: _headers);
       if (response.statusCode == 200) {
-        _products = (json.decode(response.body) as List).cast<Map<String, dynamic>>();
-        print("📦 [Dibs-Log] Berhasil muat ${_products.length} produk dari database.");
+        final data = json.decode(response.body);
+        _dashboard = data['data'] ?? {};
+        _recentSales = List<Map<String, dynamic>>.from(data['data']['recent_sales'] ?? []);
       }
     } catch (e) {
-      print("❌ [Dibs-Log] ERROR KONEKSI: $e");
+      print('Error loading dashboard: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadProducts() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/products'), headers: _headers);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _products = List<Map<String, dynamic>>.from(data['data'] ?? []);
+      }
+    } catch (e) {
+      print('Error loading products: $e');
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> addProduct(Map<String, dynamic> data) async {
+    try {
+      await http.post(Uri.parse('$_baseUrl/products'), headers: _headers, body: json.encode(data));
+      await loadProducts();
+      await loadDashboard();
+    } catch (e) {
+      print('Error adding product: $e');
+    }
+  }
+
+  Future<void> updateProduct(dynamic id, Map<String, dynamic> data) async {
+    try {
+      await http.put(Uri.parse('$_baseUrl/products/$id'), headers: _headers, body: json.encode(data));
+      await loadProducts();
+    } catch (e) {
+      print('Error updating product: $e');
+    }
+  }
+
+  Future<void> deleteProduct(dynamic id) async {
+    try {
+      await http.delete(Uri.parse('$_baseUrl/products/$id'), headers: _headers);
+      await loadProducts();
+    } catch (e) {
+      print('Error deleting product: $e');
+    }
+  }
+
+  void searchProducts(String query) {
+    notifyListeners();
+  }
+
+  void addToCart(Map<String, dynamic> product, int quantity) {
+    final existingIndex = _cartItems.indexWhere((item) => item['id'] == product['id']);
+    if (existingIndex >= 0) {
+      _cartItems[existingIndex]['quantity'] += quantity;
+      _cartItems[existingIndex]['subtotal'] = _cartItems[existingIndex]['quantity'] * _cartItems[existingIndex]['price'];
+    } else {
+      _cartItems.add({
+        'id': product['id'],
+        'name': product['name'],
+        'price': product['price'],
+        'quantity': quantity,
+        'subtotal': quantity * (product['price'] as num).toInt(),
+      });
     }
     notifyListeners();
   }
 
-  // --- SIMPAN KE DATABASE ---
-  Future<void> addProduct(Map<String, dynamic> data) async {
-    print("🚀 [Dibs-Log] Mengirim produk baru ke database: ${data['name']}");
-    try {
-      final response = await http.post(
-        Uri.parse('$apiUrl/products'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(data),
-      );
-      print("📡 [Dibs-Log] Respon Server: ${response.statusCode}");
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        print("✅ [Dibs-Log] Produk Tersimpan!");
-        await loadProducts();
-      }
-    } catch (e) {
-      print("❌ [Dibs-Log] GAGAL SIMPAN: $e");
+  void incrementCartItem(dynamic productId) {
+    final index = _cartItems.indexWhere((item) => item['id'] == productId);
+    if (index >= 0) {
+      _cartItems[index]['quantity']++;
+      _cartItems[index]['subtotal'] = _cartItems[index]['quantity'] * _cartItems[index]['price'];
+      notifyListeners();
     }
   }
 
-  // --- VOICE LOGIC ---
-  Future<void> processVoiceCommand(String command) async {
-    print("🎙️ [Dibs-Log] Voice Diterima: '$command'");
-    _lastVoiceText = command;
-    
-    if (_products.isEmpty) {
-      print("⚠️ [Dibs-Log] Daftar produk kosong, menarik data dulu...");
-      await loadProducts();
+  void decrementCartItem(dynamic productId) {
+    final index = _cartItems.indexWhere((item) => item['id'] == productId);
+    if (index >= 0) {
+      if (_cartItems[index]['quantity'] > 1) {
+        _cartItems[index]['quantity']--;
+        _cartItems[index]['subtotal'] = _cartItems[index]['quantity'] * _cartItems[index]['price'];
+      } else {
+        _cartItems.removeAt(index);
+      }
+      notifyListeners();
     }
+  }
 
-    String cleanCommand = command.toLowerCase();
-    bool found = false;
+  void clearCart() {
+    _cartItems.clear();
+    notifyListeners();
+  }
 
+  Future<void> checkout() async {
+    try {
+      await http.post(Uri.parse('$_baseUrl/sales'), headers: _headers, body: json.encode({'items': _cartItems, 'total': cartTotal}));
+      clearCart();
+      await loadDashboard();
+    } catch (e) {
+      print('Error checkout: $e');
+    }
+  }
+
+  Future<void> processVoiceScan(String text) async {
+    _lastVoiceText = text;
+    if (_products.isEmpty) await loadProducts();
+    final cleanText = text.toLowerCase();
     for (var product in _products) {
-      String pName = product['name'].toString().toLowerCase();
-      if (cleanCommand.contains(pName)) {
-        print("🎯 [Dibs-Log] MATCH! Menambah $pName ke keranjang.");
-        addToCart(product, 1);
-        found = true;
+      final productName = product['name'].toString().toLowerCase();
+      if (cleanText.contains(productName)) {
+        final match = RegExp(r'(\d+)').firstMatch(cleanText);
+        final quantity = match != null ? int.parse(match.group(0)!) : 1;
+        addToCart(product, quantity);
         break;
       }
     }
-
-    if (!found) print("❓ [Dibs-Log] Produk tidak ditemukan untuk suara: '$command'");
     notifyListeners();
   }
 
-  void addToCart(Map<String, dynamic> product, int qty) {
-    _cartItems.add({
-      'id': product['id'],
-      'name': product['name'],
-      'quantity': qty,
-      'price': product['price'],
-      'subtotal': qty * (double.tryParse(product['price'].toString()) ?? 0),
-    });
-    notifyListeners();
-  }
-  
-  void clearCart() { _cartItems.clear(); notifyListeners(); }
+  Future<void> processVoiceCommand(String text) => processVoiceScan(text);
 }

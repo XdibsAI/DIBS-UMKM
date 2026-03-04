@@ -13,6 +13,8 @@ import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'widgets/toko/inclusive_checkout.dart';
 
+const String apiUrl = String.fromEnvironment("API_URL", defaultValue: "http://94.100.26.128:8081/api/v1");
+
 void main() {
   runApp(const DibsApp());
 }
