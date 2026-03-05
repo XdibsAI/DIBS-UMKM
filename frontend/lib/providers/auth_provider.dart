@@ -6,6 +6,11 @@ import '../services/api_service.dart';
 class AuthProvider extends ChangeNotifier {
   User? _user;
   String? _token;
+  
+  // Expose token for TokoProvider
+  String? get token => _token;
+  
+  // Expose token for TokoProvider
   bool _isLoading = false;
   bool _isInitializing = true;
   String? _error;

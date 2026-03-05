@@ -31,7 +31,15 @@ class DibsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProjectProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => SocialProvider()),
-        ChangeNotifierProvider(create: (_) => TokoProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, TokoProvider>(
+          create: (_) => TokoProvider(),
+          update: (_, auth, toko) {
+            if (toko != null && auth.token != null) {
+              toko.setAuthToken(auth.token!);
+            }
+            return toko ?? TokoProvider();
+          },
+        ),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, child) {
