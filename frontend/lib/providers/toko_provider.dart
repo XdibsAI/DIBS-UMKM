@@ -153,18 +153,33 @@ class TokoProvider extends ChangeNotifier {
   }
 
   Future<void> processVoiceScan(String text) async {
+    print('🎤 Voice scan: $text');
     _lastVoiceText = text;
-    if (_products.isEmpty) await loadProducts();
+    
+    if (_products.isEmpty) {
+      print('📦 Loading products first...');
+      await loadProducts();
+    }
+    
+    print('📦 Searching in ${_products.length} products');
     final cleanText = text.toLowerCase();
+    
     for (var product in _products) {
       final productName = product['name'].toString().toLowerCase();
+      print('  Checking: $productName vs $cleanText');
+      
       if (cleanText.contains(productName)) {
         final match = RegExp(r'(\d+)').firstMatch(cleanText);
         final quantity = match != null ? int.parse(match.group(0)!) : 1;
+        
+        print('✅ MATCH! Adding $quantity x ${product['name']} to cart');
         addToCart(product, quantity);
+        notifyListeners(); // Force UI update
         break;
       }
     }
+    
+    print('🛒 Cart now has ${_cartItems.length} items');
     notifyListeners();
   }
 
