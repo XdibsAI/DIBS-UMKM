@@ -88,6 +88,8 @@ class TokoProvider extends ChangeNotifier {
       await http.post(Uri.parse('$_baseUrl/products'), headers: _headers, body: json.encode(data));
       await loadProducts();
       await loadDashboard();
+      await loadProducts();
+      await loadProducts();
     } catch (e) {
       print('Error adding product: $e');
     }
@@ -166,6 +168,7 @@ class TokoProvider extends ChangeNotifier {
       await http.post(Uri.parse('$_baseUrl/sales'), headers: _headers, body: json.encode({'items': _cartItems, 'total': cartTotal}));
       clearCart();
       await loadDashboard();
+      await loadProducts();
     } catch (e) {
       print('Error checkout: $e');
     }
