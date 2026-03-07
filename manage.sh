@@ -83,9 +83,9 @@ status() {
     if is_running $DOWNLOAD_PORT; then
         local dl_pid=$(lsof -ti:$DOWNLOAD_PORT)
         echo -e "  Download      : ${GREEN}✅ RUNNING${NC} (port $DOWNLOAD_PORT, PID: $dl_pid)"
-        if [ -f "$DOWNLOAD_DIR/dibs-ai-v2.3.0-STABLE.apk" ]; then
-            local size=$(du -h "$DOWNLOAD_DIR/dibs-ai-v2.3.0-STABLE.apk" | cut -f1)
-            local modified=$(date -r "$DOWNLOAD_DIR/dibs-ai-v2.3.0-STABLE.apk" "+%Y-%m-%d %H:%M")
+        if [ -f "$DOWNLOAD_DIR/dibs1-latest.apk" ]; then
+            local size=$(du -h "$DOWNLOAD_DIR/dibs1-latest.apk" | cut -f1)
+            local modified=$(date -r "$DOWNLOAD_DIR/dibs1-latest.apk" "+%Y-%m-%d %H:%M")
             echo -e "  APK v2.3.0    : ${GREEN}✅ tersedia${NC} ($size, $modified)"
         fi
     else
@@ -120,7 +120,7 @@ status() {
     echo -e "  Memory Free   : $(free -h | awk '/^Mem:/ {print $4}') / $(free -h | awk '/^Mem:/ {print $2}')"
 
     echo -e "\n${BLUE}════════════════════════════════════════${NC}"
-    echo -e "📱 APK: http://$IP:$DOWNLOAD_PORT/dibs-ai-v2.3.0-STABLE.apk"
+    echo -e "📱 APK: http://$IP:$DOWNLOAD_PORT/dibs1-latest.apk"
     echo -e "🤖 API: http://$IP:$BACKEND_PORT/api/docs"
     echo -e "💚 Health: http://$IP:$BACKEND_PORT/health"
     echo -e "🔧 MCP: http://localhost:$MCP_PORT"
@@ -201,7 +201,7 @@ start() {
 <html><head><title>DIBS AI v2.3.0</title></head>
 <body style="font-family: Arial; padding: 40px; background: #0a0a0a; color: #0f0;">
 <h1>🤖 DIBS AI v2.3.0 - Production Stable</h1>
-<p>📱 Download APK: <a href="dibs-ai-v2.3.0-STABLE.apk" style="color: #0f0;">dibs-ai-v2.3.0-STABLE.apk</a></p>
+<p>📱 Download APK: <a href="dibs1-latest.apk" style="color: #0f0;">dibs1-latest.apk</a></p>
 <p>🚀 Features: Nemotron AI, Toko POS, Voice Scan, Mode Inklusif</p>
 </body></html>
 ENDHTML
@@ -222,26 +222,26 @@ restart() {
 }
 
 build() {
-    echo -e "\n${BLUE}📱 BUILDING APK v2.3.0...${NC}\n"
+    echo -e "\n${BLUE}📱 BUILDING APK...${NC}\n"
     cd "$FRONTEND_DIR"
-    
+
     flutter clean
     flutter pub get
-    
-    echo -e "${YELLOW}⏳ Building with auth token support...${NC}"
-    flutter build apk --release --dart-define=API_URL=http://$IP:$BACKEND_PORT/api/v1
-    
-    mkdir -p "$DOWNLOAD_DIR/archive"
-    
+
+    echo -e "${YELLOW}⏳ Building APK...${NC}"
+    flutter build apk --release
+
+    mkdir -p "$DOWNLOAD_DIR"
+
     local timestamp=$(date +%Y%m%d-%H%M%S)
-    cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/dibs-ai-v2.3.0-STABLE.apk"
-    cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/archive/dibs-$timestamp.apk"
-    
-    local size=$(du -h "$DOWNLOAD_DIR/dibs-ai-v2.3.0-STABLE.apk" | cut -f1)
+    cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/dibs1-latest.apk"
+    cp build/app/outputs/flutter-apk/app-release.apk "$DOWNLOAD_DIR/dibs1-$timestamp.apk"
+
+    local size=$(du -h "$DOWNLOAD_DIR/dibs1-latest.apk" | cut -f1)
     echo -e "\n${GREEN}✅ APK Ready!${NC}"
     echo -e "  📦 Size: $size"
-    echo -e "  📱 URL: http://$IP:$DOWNLOAD_PORT/dibs-ai-v2.3.0-STABLE.apk"
-    echo -e "  💾 Backup: archive/dibs-$timestamp.apk\n"
+    echo -e "  📱 Latest: http://$IP:$DOWNLOAD_PORT/dibs1-latest.apk"
+    echo -e "  💾 Backup: dibs1-$timestamp.apk\n"
 }
 
 logs() {

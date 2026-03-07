@@ -1,3 +1,4 @@
+import 'voice_scan_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
@@ -16,9 +17,17 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   bool _isInitialized = false;
 
   @override
-  void initState() {
+    void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        // Jika pindah ke tab Dashboard (index 0), refresh data
+        if (_tabController.index == 0) {
+          context.read<TokoProvider>().loadDashboard();
+        }
+      }
+    });
     
     // Load data setelah frame pertama
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -72,6 +81,36 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   Color _getIconColor(BuildContext context) {
     return const Color(0xFF00FFFF);
   }
+
+  @override
+  
+  
+  
+  void _openVoiceScanner() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const VoiceScanDialog(),
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      // Kirim ke Provider untuk diproses masuk keranjang
+      final provider = Provider.of<TokoProvider>(context, listen: false);
+      provider.processVoiceCommand(result);
+      
+      // Feedback visual di layar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Dibs mendeteksi: $result"), 
+          backgroundColor: const Color(0xFF00FFFF),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -403,7 +442,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             Padding(
               padding: const EdgeInsets.all(16),
               child: ElevatedButton.icon(
-                onPressed: () => _showVoiceScanDialog(context, iconColor),
+                onPressed: _openVoiceScanner,
                 icon: const Icon(Icons.mic, color: Colors.black),
                 label: const Text(
                   '🎤 Scan Suara Kasir',
@@ -440,21 +479,30 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: cartItems.length,
-                      itemBuilder: (context, index) {
-                        final item = cartItems[index];
-                        return _buildCartItem(
-                          context,
-                          item,
-                          provider,
-                          iconColor,
-                          textColor,
-                          secondaryTextColor,
-                          surfaceColor,
-                        );
-                      },
+                  :                     SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        columnSpacing: 15,
+                        horizontalMargin: 10,
+                        headingRowHeight: 40,
+                        columns: [
+                          DataColumn(label: Text('PRODUK', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('QTY', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
+                        ],
+                        rows: provider.products.map((item) => DataRow(
+                          cells: [
+                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
+                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(IconButton(
+                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                              onPressed: () => provider.decrementCartItem(item['id']),
+                            )),
+                          ],
+                        )).toList(),
+                      ),
                     ),
             ),
 
@@ -674,22 +722,31 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            return _buildProductItem(
-                              context,
-                              product,
-                              provider,
-                              iconColor,
-                              textColor,
-                              secondaryTextColor,
-                              surfaceColor,
-                            );
-                          },
-                        ),
+                      :                     SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        columnSpacing: 15,
+                        horizontalMargin: 10,
+                        headingRowHeight: 40,
+                        columns: [
+                          DataColumn(label: Text('PRODUK', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('QTY', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
+                        ],
+                        rows: provider.products.map((item) => DataRow(
+                          cells: [
+                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
+                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(IconButton(
+                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                              onPressed: () => provider.decrementCartItem(item['id']),
+                            )),
+                          ],
+                        )).toList(),
+                      ),
+                    ),
             ),
           ],
         );
@@ -815,86 +872,106 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
 
   // ==================== DIALOGS ====================
 
+  
   void _showVoiceScanDialog(BuildContext context, Color iconColor) {
-    final textColor = Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white 
-        : Colors.black87;
-    final secondaryTextColor = Theme.of(context).brightness == Brightness.dark 
-        ? Colors.grey.shade400 
-        : Colors.grey.shade600;
-    final surfaceColor = Theme.of(context).brightness == Brightness.dark 
-        ? const Color(0xFF1A1A2E) 
-        : Colors.white;
-    final inputColor = Theme.of(context).brightness == Brightness.dark 
-        ? const Color(0xFF0A0A0F) 
-        : Colors.grey.shade100;
+    final TextEditingController voiceController = TextEditingController();
+    bool isProcessing = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.mic, color: iconColor),
-            const SizedBox(width: 8),
-            Text('🎤 Scan Suara', style: TextStyle(color: textColor)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Ucapkan produk yang ingin ditambahkan:',
-              style: TextStyle(color: secondaryTextColor),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: iconColor.withOpacity(0.3)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          title: Row(
+            children: [
+              Icon(Icons.mic, color: iconColor),
+              const SizedBox(width: 8),
+              const Text('Voice Scan Kasir'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Contoh: "2 keripik pisang 1 cireng"',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              child: const Text(
-                'Contoh: "Beli mie goreng satu, teh botol dua"',
-                style: TextStyle(fontSize: 12),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Atau ketik manual...',
-                hintStyle: TextStyle(color: secondaryTextColor),
-                filled: true,
-                fillColor: inputColor,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide.none,
+              const SizedBox(height: 16),
+              TextField(
+                controller: voiceController,
+                decoration: InputDecoration(
+                  labelText: 'Ucapkan atau ketik',
+                  hintText: '2 keripik pisang 1 cireng',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.keyboard_voice, color: iconColor),
                 ),
-                contentPadding: const EdgeInsets.all(12),
+                maxLines: 2,
+                enabled: !isProcessing,
+                autofocus: true,
               ),
-              style: TextStyle(color: textColor),
-              onSubmitted: (text) {
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                voiceController.dispose();
                 Navigator.pop(ctx);
-                if (text.isNotEmpty) {
-                  context.read<TokoProvider>().processVoiceScan(text);
+              },
+              child: const Text('Batal'),
+            ),
+            ElevatedButton.icon(
+              onPressed: isProcessing ? null : () async {
+                final text = voiceController.text.trim();
+                if (text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mohon masukkan teks')),
+                  );
+                  return;
+                }
+
+                setState(() => isProcessing = true);
+
+                try {
+                  await context.read<TokoProvider>().processVoiceScan(text);
+                  
+                  Navigator.pop(ctx);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Produk ditambahkan ke keranjang'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } finally {
+                  setState(() => isProcessing = false);
                 }
               },
+              icon: isProcessing 
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.send),
+              label: Text(isProcessing ? 'Memproses...' : 'Proses'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: iconColor,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
-          ),
-        ],
       ),
-    );
+    ).then((_) => voiceController.dispose());
   }
+
 
   void _showAddProductDialog(
     BuildContext context,
@@ -982,7 +1059,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               if (nameController.text.isNotEmpty) {
                 final data = {
                   'name': nameController.text,
-                  'price': int.tryParse(priceController.text) ?? 0,
+                  'price': double.tryParse(priceController.text) ?? 0.0,
                   'stock': int.tryParse(stockController.text) ?? 0,
                 };
                 context.read<TokoProvider>().addProduct(data);
@@ -1087,7 +1164,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             onPressed: () {
               final data = {
                 'name': nameController.text,
-                'price': int.tryParse(priceController.text) ?? 0,
+                'price': double.tryParse(priceController.text) ?? 0.0,
                 'stock': int.tryParse(stockController.text) ?? 0,
               };
               context.read<TokoProvider>().updateProduct(product['id'], data);

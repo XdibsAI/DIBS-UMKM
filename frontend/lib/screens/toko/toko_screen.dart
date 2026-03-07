@@ -491,19 +491,11 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                           DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
                           DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
                         ],
-                        rows: provider.cartItems.map((item) => DataRow(
+                        rows: provider.products.map((item) => DataRow(
                           cells: [
                             DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
                             DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
-                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
-                            DataCell(IconButton(
-                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
-                              onPressed: () => provider.decrementCartItem(item['id']),
-                            )),
-                          ],
-                        )).toList(),
-                      ),
-                    ),
+rows: cartItems.map((item) => DataRow(                          cells: [                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),                            DataCell(Text('${item['quantity'] ?? 0}', style: TextStyle(color: Colors.white))),                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),                            DataCell(IconButton(                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),                              onPressed: () => provider.decrementCartItem(item['id']),                            )),                          ],
             ),
 
             // Total & Checkout
@@ -734,14 +726,17 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                           DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
                           DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
                         ],
-                        rows: provider.cartItems.map((item) => DataRow(
+                        rows: products.map((product) => DataRow(
                           cells: [
-                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
-                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text(product['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
+                            DataCell(Text('${product['stock'] ?? 0}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text('Rp ${_formatNumber(product['price'] ?? 0)}', style: TextStyle(color: Colors.white))),
                             DataCell(IconButton(
-                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
-                              onPressed: () => provider.decrementCartItem(item['id']),
+                              icon: Icon(Icons.add_circle, color: Colors.green, size: 18),
+                              onPressed: () {
+                                provider.addToCart(product, 1);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${product['name']} ditambahkan'), duration: Duration(seconds: 1)));
+                              },
                             )),
                           ],
                         )).toList(),

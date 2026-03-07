@@ -1,3 +1,4 @@
+import 'voice_scan_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
@@ -16,9 +17,17 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   bool _isInitialized = false;
 
   @override
-  void initState() {
+    void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        // Jika pindah ke tab Dashboard (index 0), refresh data
+        if (_tabController.index == 0) {
+          context.read<TokoProvider>().loadDashboard();
+        }
+      }
+    });
     
     // Load data setelah frame pertama
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -74,8 +83,37 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   }
 
   @override
-  Widget build(BuildContext context) {
+  
+  
+  
+  void _openVoiceScanner() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const VoiceScanDialog(),
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      // Kirim ke Provider untuk diproses masuk keranjang
+      final provider = Provider.of<TokoProvider>(context, listen: false);
+      provider.processVoiceCommand(result);
+      
+      // Feedback visual di layar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Dibs mendeteksi: $result"), 
+          backgroundColor: const Color(0xFF00FFFF),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 
+
+
+  @override
+  Widget build(BuildContext context) {
     final bgColor = _getBackgroundColor(context);
     final surfaceColor = _getSurfaceColor(context);
     final textColor = _getTextColor(context);
@@ -95,42 +133,43 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.accessibility_new, color: iconColor),
-            onPressed: () {
-              Navigator.pushNamed(context, '/inclusive-checkout');
-            },
-            tooltip: 'Mode Inklusif',
-          ),
-        ],
-        bottom: const TabBar(
-          tabs: [
-            Tab(text: 'Dashboard', icon: Icon(Icons.dashboard)),
-            Tab(text: 'Kasir', icon: Icon(Icons.point_of_sale)),
-            Tab(text: 'Produk', icon: Icon(Icons.inventory)),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: iconColor,
+          labelColor: iconColor,
+          unselectedLabelColor: secondaryTextColor,
+          tabs: const [
+            Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
+            Tab(icon: Icon(Icons.shopping_cart), text: 'Kasir'),
+            Tab(icon: Icon(Icons.inventory), text: 'Produk'),
           ],
         ),
       ),
-      body: Consumer<TokoProvider>(
-        builder: (context, provider, child) {
-          return TabBarView(
-            children: [
-              _buildDashboard(context),
-    // Dashboard called
-              _buildKasir(context),
-    // Kasir called
-              _buildProduk(context),
-    // Produk called
-            ],
-          );
-        },
-      ),
+      body: _isInitialized 
+          ? TabBarView(
+              controller: _tabController,
+              children: [
+                _buildDashboard(context, iconColor, textColor, secondaryTextColor, surfaceColor),
+                _buildKasir(context, iconColor, textColor, secondaryTextColor, surfaceColor),
+                _buildProduk(context, iconColor, textColor, secondaryTextColor, surfaceColor),
+              ],
+            )
+          : const Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
+              ),
+            ),
     );
   }
 
   // 📊 Dashboard Tab
-  Widget _buildDashboard(BuildContext context) {
+  Widget _buildDashboard(
+    BuildContext context,
+    Color iconColor,
+    Color textColor,
+    Color secondaryTextColor,
+    Color surfaceColor,
+  ) {
     return Consumer<TokoProvider>(
       builder: (context, provider, child) {
         // Tampilkan loading jika masih loading
@@ -385,7 +424,13 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   }
 
   // 🛒 Kasir Tab
-  Widget _buildKasir(BuildContext context) {
+  Widget _buildKasir(
+    BuildContext context,
+    Color iconColor,
+    Color textColor,
+    Color secondaryTextColor,
+    Color surfaceColor,
+  ) {
     return Consumer<TokoProvider>(
       builder: (context, provider, child) {
         final cartItems = provider.cartItems ?? [];
@@ -397,7 +442,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             Padding(
               padding: const EdgeInsets.all(16),
               child: ElevatedButton.icon(
-                onPressed: () => _showVoiceScanDialog(context, iconColor),
+                onPressed: _openVoiceScanner,
                 icon: const Icon(Icons.mic, color: Colors.black),
                 label: const Text(
                   '🎤 Scan Suara Kasir',
@@ -434,21 +479,30 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: cartItems.length,
-                      itemBuilder: (context, index) {
-                        final item = cartItems[index];
-                        return _buildCartItem(
-                          context,
-                          item,
-                          provider,
-                          iconColor,
-                          textColor,
-                          secondaryTextColor,
-                          surfaceColor,
-                        );
-                      },
+                  :                     SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        columnSpacing: 15,
+                        horizontalMargin: 10,
+                        headingRowHeight: 40,
+                        columns: [
+                          DataColumn(label: Text('PRODUK', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('QTY', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
+                        ],
+                        rows: provider.products.map((item) => DataRow(
+                          cells: [
+                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
+                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(IconButton(
+                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                              onPressed: () => provider.decrementCartItem(item['id']),
+                            )),
+                          ],
+                        )).toList(),
+                      ),
                     ),
             ),
 
@@ -589,7 +643,13 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   }
 
   // 📦 Produk Tab
-  Widget _buildProduk(BuildContext context) {
+  Widget _buildProduk(
+    BuildContext context,
+    Color iconColor,
+    Color textColor,
+    Color secondaryTextColor,
+    Color surfaceColor,
+  ) {
     return Consumer<TokoProvider>(
       builder: (context, provider, child) {
         final products = provider.products ?? [];
@@ -662,22 +722,31 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final product = products[index];
-                            return _buildProductItem(
-                              context,
-                              product,
-                              provider,
-                              iconColor,
-                              textColor,
-                              secondaryTextColor,
-                              surfaceColor,
-                            );
-                          },
-                        ),
+                      :                     SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: DataTable(
+                        columnSpacing: 15,
+                        horizontalMargin: 10,
+                        headingRowHeight: 40,
+                        columns: [
+                          DataColumn(label: Text('PRODUK', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('QTY', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
+                          DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
+                        ],
+                        rows: provider.products.map((item) => DataRow(
+                          cells: [
+                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
+                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(IconButton(
+                              icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
+                              onPressed: () => provider.decrementCartItem(item['id']),
+                            )),
+                          ],
+                        )).toList(),
+                      ),
+                    ),
             ),
           ],
         );
@@ -798,101 +867,111 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
           ),
         ],
       ),
+    );
+  }
 
+  // ==================== DIALOGS ====================
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color iconColor,
-    Color surfaceColor,
-  ) {
-    return Card(
-      color: surfaceColor,
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: iconColor, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: iconColor,
+  
+  void _showVoiceScanDialog(BuildContext context, Color iconColor) {
+    final TextEditingController voiceController = TextEditingController();
+    bool isProcessing = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          title: Row(
+            children: [
+              Icon(Icons.mic, color: iconColor),
+              const SizedBox(width: 8),
+              const Text('Voice Scan Kasir'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Contoh: "2 keripik pisang 1 cireng"',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: voiceController,
+                decoration: InputDecoration(
+                  labelText: 'Ucapkan atau ketik',
+                  hintText: '2 keripik pisang 1 cireng',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.keyboard_voice, color: iconColor),
+                ),
+                maxLines: 2,
+                enabled: !isProcessing,
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                voiceController.dispose();
+                Navigator.pop(ctx);
+              },
+              child: const Text('Batal'),
             ),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: iconColor.withOpacity(0.7),
+            ElevatedButton.icon(
+              onPressed: isProcessing ? null : () async {
+                final text = voiceController.text.trim();
+                if (text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Mohon masukkan teks')),
+                  );
+                  return;
+                }
+
+                setState(() => isProcessing = true);
+
+                try {
+                  await context.read<TokoProvider>().processVoiceScan(text);
+                  
+                  Navigator.pop(ctx);
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Produk ditambahkan ke keranjang'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('❌ Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                } finally {
+                  setState(() => isProcessing = false);
+                }
+              },
+              icon: isProcessing 
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Icon(Icons.send),
+              label: Text(isProcessing ? 'Memproses...' : 'Proses'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: iconColor,
+                foregroundColor: Colors.white,
               ),
             ),
           ],
         ),
       ),
-    );
+    ).then((_) => voiceController.dispose());
   }
 
-  void _showVoiceScanDialog(BuildContext context, Color iconColor) {
-    showDialog(
-      context: context,
-      builder: (BuildContext ctx) {
-        String text = '';
-        return AlertDialog(
-          title: const Text('Scan Suara'),
-          content: TextField(
-            onChanged: (val) => text = val,
-            decoration: const InputDecoration(
-              hintText: 'Contoh: 2 keripik pisang 1 cireng',
-              border: OutlineInputBorder(),
-            ),
-            autofocus: true,
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Provider.of<TokoProvider>(context, listen: false)
-                    .processVoiceScan(text);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: iconColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Proses'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _processCheckout(BuildContext context, TokoProvider provider, Color iconColor) async {
-    final success = await provider.checkout();
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Transaksi berhasil!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('❌ Transaksi gagal'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   void _showAddProductDialog(
     BuildContext context,
@@ -904,68 +983,98 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     final nameController = TextEditingController();
     final priceController = TextEditingController();
     final stockController = TextEditingController();
+    final inputColor = Theme.of(context).brightness == Brightness.dark 
+        ? const Color(0xFF0A0A0F) 
+        : Colors.grey.shade100;
 
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: const Text('Tambah Produk'),
-          content: Column(
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Tambah Produk', style: TextStyle(color: textColor)),
+        content: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
+            children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Nama Produk',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
+                style: TextStyle(color: textColor),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: priceController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Harga',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: stockController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Stok',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
               ),
             ],
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                final data = {
+                  'name': nameController.text,
+                  'price': double.tryParse(priceController.text) ?? 0.0,
+                  'stock': int.tryParse(stockController.text) ?? 0,
+                };
+                context.read<TokoProvider>().addProduct(data);
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: iconColor,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  final data = {
-                    'name': nameController.text,
-                    'price': int.tryParse(priceController.text) ?? 0,
-                    'stock': int.tryParse(stockController.text) ?? 0,
-                  };
-                  context.read<TokoProvider>().addProduct(data);
-                  Navigator.pop(ctx);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: iconColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -978,103 +1087,251 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     Color surfaceColor,
   ) {
     final nameController = TextEditingController(text: product['name']);
-    final priceController = TextEditingController(text: product['price'].toString());
-    final stockController = TextEditingController(text: product['stock'].toString());
+    final priceController = TextEditingController(text: '${product['price']}');
+    final stockController = TextEditingController(text: '${product['stock']}');
+    final inputColor = Theme.of(context).brightness == Brightness.dark 
+        ? const Color(0xFF0A0A0F) 
+        : Colors.grey.shade100;
 
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: const Text('Edit Produk'),
-          content: Column(
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Edit Produk', style: TextStyle(color: textColor)),
+        content: SingleChildScrollView(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
+            children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Nama Produk',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
+                style: TextStyle(color: textColor),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: priceController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Harga',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: stockController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Stok',
-                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
                 ),
                 keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
               ),
             ],
           ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final data = {
+                'name': nameController.text,
+                'price': double.tryParse(priceController.text) ?? 0.0,
+                'stock': int.tryParse(stockController.text) ?? 0,
+              };
+              context.read<TokoProvider>().updateProduct(product['id'], data);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: iconColor,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            ElevatedButton(
-              onPressed: () {
-                final data = {
-                  'name': nameController.text,
-                  'price': int.tryParse(priceController.text) ?? 0,
-                  'stock': int.tryParse(stockController.text) ?? 0,
-                };
-                context.read<TokoProvider>().updateProduct(product['id'], data);
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: iconColor,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showDeleteConfirmDialog(
+  void _deleteProduct(
     BuildContext context,
     int productId,
+    TokoProvider provider,
     Color iconColor,
-    Color secondaryTextColor,
+    Color textColor,
   ) {
+    final secondaryTextColor = Theme.of(context).brightness == Brightness.dark 
+        ? Colors.grey.shade400 
+        : Colors.grey.shade600;
+    final surfaceColor = Theme.of(context).brightness == Brightness.dark 
+        ? const Color(0xFF1A1A2E) 
+        : Colors.white;
+
     showDialog(
       context: context,
-      builder: (BuildContext ctx) {
-        return AlertDialog(
-          title: const Text('Hapus Produk'),
-          content: const Text('Apakah Anda yakin ingin menghapus produk ini?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Konfirmasi', style: TextStyle(color: textColor)),
+        content: Text(
+          'Yakin ingin menghapus produk ini?',
+          style: TextStyle(color: secondaryTextColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              provider.deleteProduct(productId);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            ElevatedButton(
-              onPressed: () {
-                context.read<TokoProvider>().deleteProduct(productId);
-                Navigator.pop(ctx);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Hapus'),
-            ),
-          ],
-        );
-      },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
     );
   }
 
+  void _processCheckout(BuildContext context, TokoProvider provider, Color iconColor) {
+    final textColor = Theme.of(context).brightness == Brightness.dark 
+        ? Colors.white 
+        : Colors.black87;
+    final secondaryTextColor = Theme.of(context).brightness == Brightness.dark 
+        ? Colors.grey.shade400 
+        : Colors.grey.shade600;
+    final surfaceColor = Theme.of(context).brightness == Brightness.dark 
+        ? const Color(0xFF1A1A2E) 
+        : Colors.white;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: surfaceColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Proses Pembayaran', style: TextStyle(color: textColor)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Total: Rp ${_formatNumber(provider.cartTotal)}',
+              style: TextStyle(
+                color: iconColor,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Konfirmasi pembayaran?',
+              style: TextStyle(color: secondaryTextColor),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await provider.checkout();
+              Navigator.pop(ctx);
+              
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Row(
+                      children: const [
+                        Icon(Icons.check_circle, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text('✅ Transaksi berhasil!'),
+                      ],
+                    ),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: iconColor,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Bayar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== HELPERS ====================
+
+  String _formatNumber(dynamic value) {
+    if (value == null) return '0';
+    if (value is int) return value.toString();
+    if (value is double) return value.toStringAsFixed(0);
+    return value.toString();
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null || dateStr.isEmpty) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays == 0) {
+        if (difference.inHours == 0) {
+          return '${difference.inMinutes} menit yang lalu';
+        }
+        return '${difference.inHours} jam yang lalu';
+      } else if (difference.inDays == 1) {
+        return 'Kemarin';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} hari yang lalu';
+      } else {
+        return '${date.day}/${date.month}/${date.year}';
+      }
+    } catch (e) {
+      return dateStr;
+    }
+  }
 }

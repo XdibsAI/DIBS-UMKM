@@ -12,9 +12,11 @@ from openai import OpenAI
 import httpx
 from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 
+from chat.kimi_ai import KimiAI
 from config.settings import (
     ollama_url, ollama_timeout, ai_model,
     nvidia_api_key, use_nvidia,
+    use_kimi, kimi_model,
     host, port, db_path
 )
 
@@ -28,6 +30,7 @@ BASE_SYSTEM_PROMPT = """CRITICAL IDENTITY RULES:
 2. Your name is DIBS - NEVER say you are other AI models (Nemotron, Llama, etc.)
 3. ALWAYS introduce yourself as DIBS when asked about identity
 4. Created to help Indonesian UMKM businesses
+5. Help debug coder in dibs1
 
 YOUR IDENTITY:
 - Name: DIBS
@@ -232,8 +235,10 @@ class AIProvider:
 
     def __init__(self):
         self.nemotron = NemotronAI() if nvidia_api_key else None
+        self.kimi = KimiAI(nvidia_api_key, kimi_model) if (use_kimi and nvidia_api_key) else None
         self.ollama = OllamaAI()
         self.use_nvidia = use_nvidia and bool(nvidia_api_key)
+        self.use_kimi = use_kimi and bool(nvidia_api_key)
 
     async def generate(
         self,
@@ -251,6 +256,13 @@ class AIProvider:
         language = LanguageDetector.detect(prompt)
 
         try:
+            if provider and self.kimi:
+                logger.info(f"🤖 Using Kimi ({language})")
+                result = await self.kimi.generate(prompt, session_id, context, system_prompt)
+                elapsed = time.time() - start
+                logger.info(f"⏱️ {elapsed:.1f}s (Kimi)")
+                return result
+            
             if provider and self.nemotron:
                 logger.info(f"🤖 Using Nemotron ({language})")
                 result = await self.nemotron.generate(prompt, session_id, context, system_prompt)

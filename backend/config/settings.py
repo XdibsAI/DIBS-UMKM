@@ -91,3 +91,9 @@ host = HOST
 port = PORT
 db_path = str(DB_PATH)
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://94.100.26.128:8081")
+
+# Kimi AI settings
+use_kimi = os.getenv("USE_KIMI", "false").lower() == "true"
+kimi_model = os.getenv("KIMI_MODEL", "moonshotai/kimi-k2.5")
+kimi_max_tokens = int(os.getenv("KIMI_MAX_TOKENS", "16384"))
+kimi_temperature = float(os.getenv("KIMI_TEMPERATURE", "0.7"))
