@@ -1064,6 +1064,23 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
               TextField(
                 controller: stockController,
+              const SizedBox(height: 12),
+              TextField(
+                controller: barcodeController,
+                decoration: InputDecoration(
+                  labelText: 'Barcode',
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                keyboardType: TextInputType.text,
+                style: TextStyle(color: textColor),
+              ),
                 decoration: InputDecoration(
                   labelText: 'Stok',
                   labelStyle: TextStyle(color: secondaryTextColor),
@@ -1093,6 +1110,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                   'name': nameController.text,
                   'price': double.tryParse(priceController.text) ?? 0.0,
                   'stock': int.tryParse(stockController.text) ?? 0,
+                'barcode': barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim(),
                 };
                 context.read<TokoProvider>().addProduct(data);
                 Navigator.pop(ctx);
@@ -1121,6 +1139,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     final nameController = TextEditingController(text: product['name']);
     final priceController = TextEditingController(text: '${product['price']}');
     final stockController = TextEditingController(text: '${product['stock']}');
+    final barcodeController = TextEditingController(text: product['barcode'] ?? '');
     final inputColor = Theme.of(context).brightness == Brightness.dark 
         ? const Color(0xFF0A0A0F) 
         : Colors.grey.shade100;
@@ -1170,6 +1189,23 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
               TextField(
                 controller: stockController,
+              const SizedBox(height: 12),
+              TextField(
+                controller: barcodeController,
+                decoration: InputDecoration(
+                  labelText: 'Barcode',
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                keyboardType: TextInputType.text,
+                style: TextStyle(color: textColor),
+              ),
                 decoration: InputDecoration(
                   labelText: 'Stok',
                   labelStyle: TextStyle(color: secondaryTextColor),
@@ -1198,6 +1234,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                 'name': nameController.text,
                 'price': double.tryParse(priceController.text) ?? 0.0,
                 'stock': int.tryParse(stockController.text) ?? 0,
+                'barcode': barcodeController.text.trim().isEmpty ? null : barcodeController.text.trim(),
               };
               context.read<TokoProvider>().updateProduct(product['id'], data);
               Navigator.pop(ctx);
