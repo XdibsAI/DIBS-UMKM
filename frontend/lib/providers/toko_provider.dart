@@ -175,10 +175,15 @@ class TokoProvider extends ChangeNotifier {
     print('🎤 [VOICE] Input: "$text"');
     _lastVoiceText = text;
     
+    // ALWAYS reload to ensure fresh data
+    print('📦 [VOICE] Force loading products...');
+    await loadProducts();
+    print('📦 [VOICE] Loaded ${_products.length} products');
+    
     if (_products.isEmpty) {
-      print('📦 [VOICE] Loading products...');
-      await loadProducts();
-      print('📦 [VOICE] Loaded ${_products.length} products');
+      print('❌ [VOICE] No products after load!');
+      notifyListeners();
+      return;
     }
     
     final cleanText = text.toLowerCase().trim();

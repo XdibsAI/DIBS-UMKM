@@ -734,7 +734,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                           DataColumn(label: Text('SUBTOTAL', style: TextStyle(color: iconColor, fontSize: 12))),
                           DataColumn(label: Text('', style: TextStyle(color: iconColor, fontSize: 12))),
                         ],
-                        rows: products.map((product) => DataRow(
+                        rows: provider.products.map((item) => DataRow(
                           cells: [
                             DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
                             DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
