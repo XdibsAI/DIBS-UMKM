@@ -1,4 +1,5 @@
 import 'voice_scan_dialog.dart';
+import 'barcode_scanner_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
@@ -441,20 +442,51 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             // Voice Scan Button
             Padding(
               padding: const EdgeInsets.all(16),
-              child: ElevatedButton.icon(
-                onPressed: _openVoiceScanner,
-                icon: const Icon(Icons.mic, color: Colors.black),
-                label: const Text(
-                  '🎤 Scan Suara Kasir',
-                  style: TextStyle(color: Colors.black, fontSize: 16),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: iconColor,
-                  minimumSize: const Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _openVoiceScanner,
+                      icon: const Icon(Icons.mic, color: Colors.black),
+                      label: const Text(
+                        '🎤 Scan Suara',
+                        style: TextStyle(color: Colors.black, fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: iconColor,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const BarcodeScannerScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_scanner, color: Colors.black),
+                      label: const Text(
+                        '📷 Barcode',
+                        style: TextStyle(color: Colors.black, fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amberAccent,
+                        minimumSize: const Size(double.infinity, 56),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
