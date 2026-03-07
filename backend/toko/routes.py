@@ -150,14 +150,15 @@ async def create_product(data: Dict, current_user: TokenData = Depends(get_curre
         stock = int(data.get('stock', 0))
         category = str(data.get('category', 'Umum'))
         description = str(data.get('description', ''))
+        barcode = str(data.get('barcode', '')).strip() or None
 
         print(f"DEBUG: u_id={type(u_id)} value={u_id}")
         print(f"DEBUG: name={type(name)} value={name}")
         print(f"DEBUG: price={type(price)} value={price}")
         print(f"DEBUG: stock={type(stock)} value={stock}")
 
-        query = "INSERT INTO toko_products (user_id, name, price, stock, category, description) VALUES (?, ?, ?, ?, ?, ?)"
-        values = (u_id, name, price, stock, category, description)
+        query = "INSERT INTO toko_products (user_id, name, price, stock, category, description, barcode) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        values = (u_id, name, price, stock, category, description, barcode)
 
         await db.execute(query, values)
         return {"status": "success", "message": "Product created successfully"}
@@ -204,3 +205,48 @@ async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_
     except Exception as e:
         logger.error(f"Sale Error: {e}")
         raise HTTPException(400, f"Gagal transaksi: {str(e)}")
+
+@router.post("/sales/scan-barcode")
+async def scan_barcode_for_sale(data: Dict, current_user: TokenData = Depends(get_current_user)):
+    try:
+        u_id = str(getattr(current_user, "id", getattr(current_user, "user_id", "0")))
+        barcode = str(data.get("barcode", "")).strip()
+        quantity = int(data.get("quantity", 1))
+
+        if not barcode:
+            raise HTTPException(400, "Barcode wajib diisi")
+
+        if quantity < 1:
+            raise HTTPException(400, "Quantity minimal 1")
+
+        product = await db.fetch_one(
+            "SELECT * FROM toko_products WHERE user_id = ? AND barcode = ?",
+            (u_id, barcode)
+        )
+
+        if not product:
+            raise HTTPException(404, "Produk dengan barcode tersebut tidak ditemukan")
+
+        product_data = dict(product)
+        stock = int(product_data.get("stock", 0))
+
+        if stock < quantity:
+            raise HTTPException(
+                400,
+                f"Stok tidak cukup. Tersedia: {stock}, diminta: {quantity}"
+            )
+
+        return {
+            "status": "success",
+            "matched": True,
+            "message": f"Produk ditemukan: {product_data.get('name', 'Produk')}",
+            "data": {
+                "product": product_data,
+                "quantity": quantity
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Scan barcode sale error: {e}")
+        raise HTTPException(400, f"Gagal scan barcode: {str(e)}")

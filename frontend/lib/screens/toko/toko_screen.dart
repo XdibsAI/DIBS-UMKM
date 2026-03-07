@@ -1,5 +1,6 @@
 import 'voice_scan_dialog.dart';
 import 'barcode_scanner_screen.dart';
+import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
@@ -1015,6 +1016,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     final nameController = TextEditingController();
     final priceController = TextEditingController();
     final stockController = TextEditingController();
+    final barcodeController = TextEditingController();
     final inputColor = Theme.of(context).brightness == Brightness.dark 
         ? const Color(0xFF0A0A0F) 
         : Colors.grey.shade100;
@@ -1064,6 +1066,20 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
               TextField(
                 controller: stockController,
+                decoration: InputDecoration(
+                  labelText: 'Stok',
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: barcodeController,
@@ -1081,19 +1097,43 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                 keyboardType: TextInputType.text,
                 style: TextStyle(color: textColor),
               ),
-                decoration: InputDecoration(
-                  labelText: 'Stok',
-                  labelStyle: TextStyle(color: secondaryTextColor),
-                  filled: true,
-                  fillColor: inputColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final code = await Navigator.push<String>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BarcodeScannerScreen(returnRawBarcode: true),
+                        ),
+                      );
+                      if (code != null && code.isNotEmpty) {
+                        barcodeController.text = code;
+
+                        final result = await ApiService.lookupProductByBarcode(code);
+                        if (result != null && result['name'] != null) {
+                          final productName = result['name'].toString().trim();
+                          if (productName.isNotEmpty) {
+                            nameController.text = productName;
+                          }
+                        }
+                      }
+                    },
+                  icon: const Icon(Icons.qr_code_scanner, color: Colors.black),
+                  label: const Text(
+                    'Scan Barcode',
+                    style: TextStyle(color: Colors.black),
                   ),
-                  contentPadding: const EdgeInsets.all(12),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amberAccent,
+                    foregroundColor: Colors.black,
+                    minimumSize: const Size(double.infinity, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: textColor),
               ),
             ],
           ),
@@ -1189,6 +1229,20 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               const SizedBox(height: 12),
               TextField(
                 controller: stockController,
+                decoration: InputDecoration(
+                  labelText: 'Stok',
+                  labelStyle: TextStyle(color: secondaryTextColor),
+                  filled: true,
+                  fillColor: inputColor,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: textColor),
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: barcodeController,
@@ -1204,20 +1258,6 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                   contentPadding: const EdgeInsets.all(12),
                 ),
                 keyboardType: TextInputType.text,
-                style: TextStyle(color: textColor),
-              ),
-                decoration: InputDecoration(
-                  labelText: 'Stok',
-                  labelStyle: TextStyle(color: secondaryTextColor),
-                  filled: true,
-                  fillColor: inputColor,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.all(12),
-                ),
-                keyboardType: TextInputType.number,
                 style: TextStyle(color: textColor),
               ),
             ],

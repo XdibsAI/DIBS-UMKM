@@ -344,4 +344,32 @@ class ApiService {
   static Future<Map<String, dynamic>> disconnectSocialAccount(String accountId) async {
     return _delete('/social/accounts/$accountId');
   }
+
+  // ==================== BARCODE LOOKUP ====================
+  static Future<Map<String, dynamic>?> lookupProductByBarcode(String barcode) async {
+    try {
+      final url =
+          'https://world.openfoodfacts.org/api/v2/product/$barcode.json?fields=product_name,brands';
+
+      final res = await http.get(Uri.parse(url));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+
+        if (data['status'] == 1) {
+          final product = data['product'] ?? {};
+
+          return {
+            'name': product['product_name'],
+            'brand': product['brands'],
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint("Barcode lookup error: $e");
+    }
+
+    return null;
+  }
+
 }
