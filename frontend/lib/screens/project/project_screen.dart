@@ -176,14 +176,182 @@ class VideoProjectCard extends StatelessWidget {
 }
 
 // ==================== KNOWLEDGE TAB ====================
-class KnowledgeTab extends StatelessWidget {
+class KnowledgeTab extends StatefulWidget {
   const KnowledgeTab({super.key});
+
+  @override
+  State<KnowledgeTab> createState() => _KnowledgeTabState();
+}
+
+class _KnowledgeTabState extends State<KnowledgeTab> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showAddDialog(BuildContext context) async {
+    final provider = Provider.of<ProjectProvider>(context, listen: false);
+    final contentController = TextEditingController();
+    String category = 'general';
+
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tambah Catatan'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Isi catatan',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: category,
+                items: const [
+                  DropdownMenuItem(value: 'general', child: Text('General')),
+                  DropdownMenuItem(value: 'finance', child: Text('Finance')),
+                  DropdownMenuItem(value: 'schedule', child: Text('Schedule')),
+                  DropdownMenuItem(value: 'technical', child: Text('Technical')),
+                  DropdownMenuItem(value: 'health', child: Text('Health')),
+                ],
+                onChanged: (v) => setState(() => category = v ?? 'general'),
+                decoration: const InputDecoration(
+                  labelText: 'Kategori',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final ok = await provider.addKnowledge(
+                contentController.text.trim(),
+                category: category,
+              );
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(ok ? 'Catatan ditambahkan' : 'Gagal menambah catatan'),
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(ProjectProvider provider, BuildContext context) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.knowledge.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.auto_stories_outlined, size: 72, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada catatan',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey.shade500,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Ceritakan aktivitasmu ke Dibs\ndan catatan otomatis akan tersimpan di sini',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => _showAddDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Tambah Catatan'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadKnowledge(search: _searchController.text.trim()),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(12),
+        itemCount: provider.knowledge.length,
+        itemBuilder: (context, index) => KnowledgeCard(item: provider.knowledge[index]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<ProjectProvider>(context);
+
     return Scaffold(
-      body: _buildBody(provider, context),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onSubmitted: (v) => provider.loadKnowledge(search: v.trim()),
+                    decoration: InputDecoration(
+                      hintText: 'Cari catatan...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchController.text.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                provider.loadKnowledge();
+                                setState(() {});
+                              },
+                            ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: () => _showAddDialog(context),
+                  icon: const Icon(Icons.add),
+                ),
+              ],
+            ),
+          ),
+          Expanded(child: _buildBody(provider, context)),
+        ],
+      ),
       floatingActionButton: provider.knowledge.isNotEmpty
           ? FloatingActionButton.extended(
               onPressed: () => _showReportDialog(context, provider),
@@ -194,84 +362,171 @@ class KnowledgeTab extends StatelessWidget {
           : null,
     );
   }
-
-  Widget _buildBody(ProjectProvider provider, BuildContext context) {
-    if (provider.isLoading) return const Center(child: CircularProgressIndicator());
-    if (provider.knowledge.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.auto_stories_outlined, size: 72, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text('Belum ada catatan', style: TextStyle(fontSize: 18, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
-            Text('Ceritakan aktivitasmu ke Dibs\ndan catatan otomatis akan tersimpan di sini', style: TextStyle(fontSize: 14, color: Colors.grey.shade400), textAlign: TextAlign.center),
-          ],
-        ),
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: () => provider.loadAll(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(12),
-        itemCount: provider.knowledge.length,
-        itemBuilder: (context, index) => KnowledgeCard(item: provider.knowledge[index]),
-      ),
-    );
-  }
 }
 
 class KnowledgeCard extends StatelessWidget {
   final Map<String, dynamic> item;
   const KnowledgeCard({super.key, required this.item});
 
+  Color _categoryColor(String category) {
+    switch (category) {
+      case 'finance':
+        return Colors.green;
+      case 'health':
+        return Colors.red;
+      case 'schedule':
+        return Colors.blue;
+      case 'credential':
+        return Colors.purple;
+      case 'technical':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<void> _showEditDialog(BuildContext context) async {
+    final provider = Provider.of<ProjectProvider>(context, listen: false);
+    final contentController = TextEditingController(text: item['content'] ?? '');
+    String category = (item['category'] ?? 'general').toString();
+
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Edit Catatan'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: contentController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Isi catatan',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: category,
+                items: const [
+                  DropdownMenuItem(value: 'general', child: Text('General')),
+                  DropdownMenuItem(value: 'finance', child: Text('Finance')),
+                  DropdownMenuItem(value: 'schedule', child: Text('Schedule')),
+                  DropdownMenuItem(value: 'technical', child: Text('Technical')),
+                  DropdownMenuItem(value: 'health', child: Text('Health')),
+                ],
+                onChanged: (v) => setState(() => category = v ?? 'general'),
+                decoration: const InputDecoration(
+                  labelText: 'Kategori',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final ok = await provider.updateKnowledgeItem(
+                int.parse(item['id'].toString()),
+                contentController.text.trim(),
+                category: category,
+              );
+              if (!context.mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(ok ? 'Catatan diupdate' : 'Gagal update catatan'),
+                  backgroundColor: ok ? Colors.green : Colors.red,
+                ),
+              );
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final provider = Provider.of<ProjectProvider>(context, listen: false);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Hapus Catatan'),
+        content: const Text('Yakin ingin menghapus catatan ini?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final ok = await provider.deleteKnowledgeItem(int.parse(item['id'].toString()));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok ? 'Catatan dihapus' : 'Gagal menghapus catatan'),
+        backgroundColor: ok ? Colors.green : Colors.red,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final category = item['category'] ?? 'general';
-    final Color color = category == 'finance' ? Colors.green :
-                        category == 'health' ? Colors.red :
-                        category == 'schedule' ? Colors.blue :
-                        category == 'credential' ? Colors.purple :
-                        category == 'technical' ? Colors.orange :
-                        Colors.grey;
+    final color = _categoryColor(category.toString());
+
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-                  child: Text(category.toUpperCase(), style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold)),
+                Chip(
+                  label: Text(category.toString()),
+                  backgroundColor: color.withOpacity(0.12),
+                  labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                Text(formatDate(item['created_at']), style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _showEditDialog(context),
+                  tooltip: 'Edit',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: () => _delete(context),
+                  tooltip: 'Hapus',
+                ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(item['content'] ?? '', style: const TextStyle(fontSize: 14, height: 1.4), maxLines: 4, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.share_outlined, size: 20),
-                  onPressed: () => _shareKnowledge(context, item),
-                  tooltip: 'Share',
-                  color: Colors.blue.shade700,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20),
-                  onPressed: () => _deleteKnowledge(context, item),
-                  tooltip: 'Hapus',
-                  color: Colors.red.shade700,
-                ),
-              ],
+            Text(
+              item['content'] ?? '',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              item['created_at']?.toString() ?? '',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -280,41 +535,6 @@ class KnowledgeCard extends StatelessWidget {
   }
 }
 
-// ==================== HELPER FUNCTIONS ====================
-String formatDate(dynamic date) {
-  if (date == null) return '';
-  try {
-    final dt = DateTime.parse(date);
-    return '${dt.day}/${dt.month}/${dt.year}';
-  } catch (e) {
-    return date.toString();
-  }
-}
-
-void _shareKnowledge(BuildContext context, Map<String, dynamic> item) {
-  Clipboard.setData(ClipboardData(text: '📝 ${item['category']?.toUpperCase() ?? 'NOTE'}\n\n${item['content']}\n\n--- Dibuat oleh DIBS AI ---'));
-  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Catatan disalin! Paste ke WhatsApp/Email')));
-}
-
-Future<void> _deleteKnowledge(BuildContext context, Map<String, dynamic> item) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Hapus Catatan'),
-      content: const Text('Yakin ingin menghapus?'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          style: TextButton.styleFrom(foregroundColor: Colors.red),
-          child: const Text('Hapus'),
-        ),
-      ],
-    ),
-  );
-  if (confirm != true) return;
-  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur hapus segera hadir')));
-}
 
 void _showReportDialog(BuildContext context, ProjectProvider provider) {
   showModalBottomSheet(

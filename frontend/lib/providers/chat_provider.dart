@@ -88,7 +88,7 @@ class ChatProvider extends ChangeNotifier {
     if (lowerText.contains('simpan dulu')) {
       final contentToSave = text.replaceAll(RegExp(r'(?i)simpan dulu'), '').trim();
       if (contentToSave.isNotEmpty) {
-        await ApiService.createKnowledge({'content': contentToSave, 'category': 'manual'});
+        await ApiService.addKnowledge({'content': contentToSave, 'category': 'manual'});
       }
     }
 

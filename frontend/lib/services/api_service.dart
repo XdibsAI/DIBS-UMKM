@@ -137,8 +137,22 @@ class ApiService {
     return _get('/knowledge');
   }
 
-  static Future<Map<String, dynamic>> createKnowledge(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>> addKnowledge(Map<String, dynamic> data) async {
     return _post('/knowledge', data);
+  }
+
+
+
+  static Future<Map<String, dynamic>> updateKnowledge(int id, Map<String, dynamic> data) async {
+    return _put('/knowledge/$id', data);
+  }
+
+  static Future<Map<String, dynamic>> deleteKnowledge(int id) async {
+    return _delete('/knowledge/$id');
+  }
+
+  static Future<Map<String, dynamic>> searchKnowledge(String query) async {
+    return _get('/knowledge?search=${Uri.encodeComponent(query)}');
   }
 
   static Future<Map<String, dynamic>> generateKnowledgeReport({required String period}) async {
@@ -382,5 +396,8 @@ class ApiService {
   static Future<Map<String, dynamic>> saveTokoPaymentSettings(Map<String, dynamic> data) async {
     return _post('/toko/payment-settings', data);
   }
+
+
+
 
 }
