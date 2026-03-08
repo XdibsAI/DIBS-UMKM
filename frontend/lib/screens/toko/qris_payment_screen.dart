@@ -2,6 +2,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
+import '../../services/printer_service.dart';
+import 'printer_setup_screen.dart';
 
 class QrisPaymentScreen extends StatefulWidget {
   final int totalAmount;
@@ -238,6 +240,45 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
           ),
         ),
         actions: [
+          OutlinedButton(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PrinterSetupScreen(),
+                ),
+              );
+            },
+            child: const Text('Pilih Printer'),
+          ),
+          OutlinedButton(
+            onPressed: () async {
+              try {
+                await PrinterService.printReceipt(
+                  items: widget.cartItems,
+                  total: widget.totalAmount,
+                  paymentMethod: paymentMethod,
+                );
+
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Struk berhasil dikirim ke printer'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal cetak struk: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Cetak Struk'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
