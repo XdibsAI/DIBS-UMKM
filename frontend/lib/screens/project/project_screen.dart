@@ -187,6 +187,16 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
   final TextEditingController _searchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ProjectProvider>().loadKnowledge();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -301,7 +311,7 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: provider.knowledge.length,
-        itemBuilder: (context, index) => KnowledgeCard(item: provider.knowledge[index]),
+        itemBuilder: (context, index) => KnowledgeCard(item: Map<String, dynamic>.from(provider.knowledge[index])),
       ),
     );
   }

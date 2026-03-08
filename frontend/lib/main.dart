@@ -5,6 +5,7 @@ import 'core/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/project_provider.dart';
+import 'providers/business_brain_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/social_provider.dart';
 import 'providers/toko_provider.dart';
@@ -29,6 +30,7 @@ class DibsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => ProjectProvider()),
+        ChangeNotifierProvider(create: (_) => BusinessBrainProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => SocialProvider()),
         ChangeNotifierProxyProvider<AuthProvider, TokoProvider>(

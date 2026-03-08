@@ -400,4 +400,19 @@ class ApiService {
 
 
 
+
+
+  // ==================== BUSINESS BRAIN ====================
+  static Future<Map<String, dynamic>> classifyBusinessNote(String text) async {
+    return _post('/business-brain/classify-note', {'text': text});
+  }
+
+  static Future<Map<String, dynamic>> getDailyBusinessSummary() async {
+    return _get('/business-brain/daily-summary');
+  }
+
+  static Future<Map<String, dynamic>> getSalesInsight({String period = 'today'}) async {
+    return _get('/business-brain/sales-insight?period=$period');
+  }
+
 }

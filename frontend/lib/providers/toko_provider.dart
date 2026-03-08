@@ -9,6 +9,7 @@ class TokoProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _products = [];
   List<Map<String, dynamic>> _cartItems = [];
   List<Map<String, dynamic>> _recentSales = [];
+  List<Map<String, dynamic>> _salesHistory = [];
   Map<String, dynamic> _dashboard = {};
   bool _isLoading = false;
   String _lastVoiceText = '';
@@ -17,6 +18,7 @@ class TokoProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get cartItems => _cartItems;
   List<Map<String, dynamic>> get cart => _cartItems;
   List<Map<String, dynamic>> get recentSales => _recentSales;
+  List<Map<String, dynamic>> get salesHistory => _salesHistory;
   Map<String, dynamic> get dashboard => _dashboard;
   bool get isLoading => _isLoading;
   String get lastVoiceText => _lastVoiceText;
@@ -84,6 +86,23 @@ class TokoProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
     print('🔵 [LOAD] Final _products.length: ${_products.length}');
+  }
+
+  Future<void> loadSalesHistory({int limit = 100}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/sales?limit=$limit'),
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _salesHistory = List<Map<String, dynamic>>.from(data['data'] ?? []);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading sales history: $e');
+    }
   }
 
   Future<void> addProduct(Map<String, dynamic> data) async {
@@ -310,6 +329,7 @@ class TokoProvider extends ChangeNotifier {
         clearCart();
         await loadDashboard();
         await loadProducts();
+        await loadSalesHistory();
         return Map<String, dynamic>.from(data);
       }
 

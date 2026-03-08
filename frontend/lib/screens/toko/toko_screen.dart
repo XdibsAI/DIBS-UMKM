@@ -1,10 +1,12 @@
 import 'voice_scan_dialog.dart';
 import 'barcode_scanner_screen.dart';
 import 'qris_payment_screen.dart';
+import 'transaction_history_tab.dart';
 import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
+import '../../providers/business_brain_provider.dart';
 import '../../core/theme.dart';
 
 class TokoScreen extends StatefulWidget {
@@ -22,12 +24,13 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   @override
     void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         // Jika pindah ke tab Dashboard (index 0), refresh data
         if (_tabController.index == 0) {
           context.read<TokoProvider>().loadDashboard();
+          context.read<BusinessBrainProvider>().loadDailySummary();
         }
       }
     });
@@ -35,6 +38,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     // Load data setelah frame pertama
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeData();
+      context.read<BusinessBrainProvider>().loadDailySummary();
     });
   }
 
@@ -145,6 +149,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
             Tab(icon: Icon(Icons.shopping_cart), text: 'Kasir'),
             Tab(icon: Icon(Icons.inventory), text: 'Produk'),
+            Tab(icon: Icon(Icons.receipt_long), text: 'Riwayat'),
           ],
         ),
       ),
@@ -155,6 +160,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                 _buildDashboard(context, iconColor, textColor, secondaryTextColor, surfaceColor),
                 _buildKasir(context, iconColor, textColor, secondaryTextColor, surfaceColor),
                 _buildProduk(context, iconColor, textColor, secondaryTextColor, surfaceColor),
+                const TransactionHistoryTab(),
               ],
             )
           : const Center(
@@ -195,6 +201,13 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              _buildBusinessBrainCard(
+                context,
+                textColor,
+                secondaryTextColor,
+                surfaceColor,
+              ),
+
               // Stats Cards - 2 baris
               Row(
                 children: [
@@ -256,7 +269,6 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
               
               // Recent Sales Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Transaksi Terakhir',
@@ -318,6 +330,108 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
           ),
         );
       },
+    );
+  }
+
+
+  Widget _buildBusinessBrainCard(
+    BuildContext context,
+    Color textColor,
+    Color secondaryTextColor,
+    Color surfaceColor,
+  ) {
+    final brain = context.watch<BusinessBrainProvider>();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: brain.isLoading && brain.dailySummary.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Business Brain Hari Ini',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Omzet: Rp ${_formatNumber(brain.dailySummary['total_sales'] ?? 0)}',
+                  style: TextStyle(color: textColor),
+                ),
+                Text(
+                  'Transaksi: ${brain.dailySummary['total_transactions'] ?? 0}',
+                  style: TextStyle(color: textColor),
+                ),
+                Text(
+                  'Pengeluaran tercatat: Rp ${_formatNumber(brain.dailySummary['finance_notes_total'] ?? 0)}',
+                  style: TextStyle(color: textColor),
+                ),
+                Text(
+                  'Profit hari ini: Rp ${_formatNumber(brain.dailySummary['profit_today'] ?? 0)}',
+                  style: TextStyle(
+                    color: (brain.dailySummary['profit_today'] ?? 0) >= 0 ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Top Products',
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...((brain.dailySummary['top_products'] as List?) ?? []).take(3).map((e) {
+                  final item = Map<String, dynamic>.from(e);
+                  return Text(
+                    '- ${item['name']} x${item['qty']}',
+                    style: TextStyle(color: textColor),
+                  );
+                }),
+                const SizedBox(height: 10),
+                Text(
+                  'Low Stock',
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...((brain.dailySummary['low_stock_products'] as List?) ?? []).take(3).map((e) {
+                  final item = Map<String, dynamic>.from(e);
+                  return Text(
+                    '- ${item['name']} (${item['stock']})',
+                    style: TextStyle(color: textColor),
+                  );
+                }),
+                const SizedBox(height: 10),
+                Text(
+                  'Rekomendasi',
+                  style: TextStyle(
+                    color: secondaryTextColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                ...((brain.dailySummary['recommendations'] as List?) ?? []).take(3).map((e) {
+                  return Text(
+                    '• $e',
+                    style: TextStyle(color: textColor),
+                  );
+                }),
+              ],
+            ),
     );
   }
 
@@ -570,7 +684,6 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                 child: Column(
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           'Total',
