@@ -129,6 +129,116 @@ class TokoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ?? double.tryParse(value)?.toInt() ?? 0;
+    }
+    return 0;
+  }
+
+  String _normalizeText(String text) {
+    var normalized = text.toLowerCase().trim();
+
+    const replacements = {
+      'á': 'a',
+      'à': 'a',
+      'â': 'a',
+      'ä': 'a',
+      'é': 'e',
+      'è': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'í': 'i',
+      'ì': 'i',
+      'î': 'i',
+      'ï': 'i',
+      'ó': 'o',
+      'ò': 'o',
+      'ô': 'o',
+      'ö': 'o',
+      'ú': 'u',
+      'ù': 'u',
+      'û': 'u',
+      'ü': 'u',
+    };
+
+    replacements.forEach((k, v) {
+      normalized = normalized.replaceAll(k, v);
+    });
+
+    normalized = normalized.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return normalized;
+  }
+
+  int _extractQuantity(String text) {
+    final normalized = _normalizeText(text);
+
+    final digitMatch = RegExp(r'\b(\d+)\b').firstMatch(normalized);
+    if (digitMatch != null) {
+      return int.tryParse(digitMatch.group(1)!) ?? 1;
+    }
+
+    const wordsToNumber = {
+      'satu': 1,
+      'dua': 2,
+      'tiga': 3,
+      'empat': 4,
+      'lima': 5,
+      'enam': 6,
+      'tujuh': 7,
+      'delapan': 8,
+      'sembilan': 9,
+      'sepuluh': 10,
+    };
+
+    for (final entry in wordsToNumber.entries) {
+      if (normalized.contains(entry.key)) {
+        return entry.value;
+      }
+    }
+
+    return 1;
+  }
+
+  int _scoreProductMatch(String inputText, Map<String, dynamic> product) {
+    final input = _normalizeText(inputText);
+    final productName = _normalizeText(product['name']?.toString() ?? '');
+    final barcode = _normalizeText(product['barcode']?.toString() ?? '');
+
+    if (productName.isEmpty) return 0;
+
+    if (input == productName) return 100;
+    if (barcode.isNotEmpty && input.contains(barcode)) return 95;
+    if (input.contains(productName)) return 90;
+    if (productName.contains(input) && input.length >= 4) return 75;
+
+    final inputWords = input.split(' ').where((e) => e.isNotEmpty).toSet();
+    final productWords = productName.split(' ').where((e) => e.isNotEmpty).toSet();
+
+    if (inputWords.isEmpty || productWords.isEmpty) return 0;
+
+    int score = 0;
+    for (final word in productWords) {
+      if (inputWords.contains(word)) {
+        score += 20;
+      } else {
+        for (final inputWord in inputWords) {
+          if (inputWord.length >= 4 &&
+              word.length >= 4 &&
+              (word.contains(inputWord) || inputWord.contains(word))) {
+            score += 10;
+            break;
+          }
+        }
+      }
+    }
+
+    return score;
+  }
+
   void addToCart(Map<String, dynamic> product, int quantity) {
     final existingIndex =
         _cartItems.indexWhere((item) => item['id'] == product['id']);
@@ -182,177 +292,34 @@ class TokoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> checkout() async {
+  Future<Map<String, dynamic>> checkout({String paymentMethod = 'cash'}) async {
     try {
-      await http.post(
+      final response = await http.post(
         Uri.parse('$_baseUrl/sales'),
         headers: _headers,
         body: json.encode({
           'items': _cartItems,
           'total': cartTotal,
+          'payment_method': paymentMethod,
         }),
       );
-      clearCart();
-      await loadDashboard();
-      await loadProducts();
+
+      final data = json.decode(response.body);
+
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        clearCart();
+        await loadDashboard();
+        await loadProducts();
+        return Map<String, dynamic>.from(data);
+      }
+
+      throw Exception(data['detail'] ?? data['message'] ?? 'Checkout gagal');
     } catch (e) {
       print('Error checkout: $e');
+      rethrow;
     }
   }
 
-  int _asInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.round();
-    if (value is num) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
-  }
-
-  String _normalizeText(String text) {
-    String normalized = text.toLowerCase().trim();
-
-    final replacements = <String, String>{
-      'vpants': 'vpans',
-      'mandeling': 'mandheling',
-      'gk': 'tidak',
-      'ga ': 'tidak ',
-      ' yg ': ' ',
-      ' pak ': ' ',
-      ' bu ': ' ',
-      ' bang ': ' ',
-      ' kak ': ' ',
-      ' beli ': ' ',
-      ' beliin ': ' ',
-      ' ambil ': ' ',
-      ' minta ': ' ',
-      ' mau ': ' ',
-      ' tolong ': ' ',
-      ' dong ': ' ',
-      ' ya ': ' ',
-      ' sama ': ' ',
-      ' dan ': ' ',
-    };
-
-    replacements.forEach((from, to) {
-      normalized = normalized.replaceAll(from, to);
-    });
-
-    normalized = normalized
-        .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-
-    return normalized;
-  }
-
-  List<String> _tokenize(String text) {
-    final normalized = _normalizeText(text);
-    if (normalized.isEmpty) return [];
-    return normalized
-        .split(' ')
-        .where((token) => token.trim().isNotEmpty)
-        .toList();
-  }
-
-  int _extractQuantity(String text) {
-    final normalized = _normalizeText(text);
-
-    final numberMatch = RegExp(r'\b(\d+)\b').firstMatch(normalized);
-    if (numberMatch != null) {
-      return int.tryParse(numberMatch.group(1)!) ?? 1;
-    }
-
-    const wordToNumber = <String, int>{
-      'satu': 1,
-      'dua': 2,
-      'tiga': 3,
-      'empat': 4,
-      'lima': 5,
-      'enam': 6,
-      'tujuh': 7,
-      'delapan': 8,
-      'sembilan': 9,
-      'sepuluh': 10,
-      'sebiji': 1,
-      'sebuah': 1,
-      'satuan': 1,
-    };
-
-    for (final entry in wordToNumber.entries) {
-      if (RegExp(r'\b${entry.key}\b').hasMatch(normalized)) {
-        return entry.value;
-      }
-    }
-
-    return 1;
-  }
-
-  Set<String> _meaningfulTokens(String text) {
-    const ignored = <String>{
-      'dan',
-      'sama',
-      'yang',
-      'tolong',
-      'mau',
-      'beli',
-      'ambil',
-      'minta',
-      'ya',
-      'dong',
-      'pak',
-      'bu',
-      'bang',
-      'kak',
-      'satu',
-      'dua',
-      'tiga',
-      'empat',
-      'lima',
-      'enam',
-      'tujuh',
-      'delapan',
-      'sembilan',
-      'sepuluh',
-    };
-
-    return _tokenize(text)
-        .where((token) => token.isNotEmpty && !ignored.contains(token))
-        .toSet();
-  }
-
-  int _scoreProductMatch(String inputText, Map<String, dynamic> product) {
-    final input = _normalizeText(inputText);
-    final productName = _normalizeText(product['name']?.toString() ?? '');
-
-    if (input.isEmpty || productName.isEmpty) return 0;
-    if (input == productName) return 100;
-    if (productName.contains(input)) return 90;
-    if (input.contains(productName)) return 85;
-
-    final inputTokens = _meaningfulTokens(input);
-    final productTokens = _meaningfulTokens(productName);
-
-    if (inputTokens.isEmpty || productTokens.isEmpty) return 0;
-
-    final overlap = inputTokens.intersection(productTokens).length;
-    if (overlap == 0) return 0;
-
-    int score = overlap * 25;
-
-    if (productTokens.every(inputTokens.contains)) {
-      score += 20;
-    }
-
-    if (inputTokens.any((token) => productName.contains(token))) {
-      score += 10;
-    }
-
-    if (productTokens.length == 1 && overlap == 1) {
-      score += 10;
-    }
-
-    return score;
-  }
 
   Future<Map<String, dynamic>> processVoiceScan(String text) async {
     print('🎤 [VOICE] Input: "$text"');

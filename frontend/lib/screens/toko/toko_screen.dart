@@ -1369,13 +1369,16 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   }
 
   void _processCheckout(BuildContext context, TokoProvider provider, Color iconColor) {
+    final cartSnapshot = provider.cartItems.map((e) => Map<String, dynamic>.from(e)).toList();
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => QrisPaymentScreen(
           totalAmount: provider.cartTotal,
-          onPaymentConfirmed: () async {
-            await provider.checkout();
+          cartItems: cartSnapshot,
+          onPaymentConfirmed: (paymentMethod) async {
+            return await provider.checkout(paymentMethod: paymentMethod);
           },
         ),
       ),

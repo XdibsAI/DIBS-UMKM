@@ -233,6 +233,7 @@ async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_
         u_id = str(getattr(current_user, "id", getattr(current_user, "user_id", "0")))
         sale_id = str(uuid.uuid4())
         total = int(data.get("total", 0))
+        payment_method = str(data.get("payment_method", "cash")).strip() or "cash"
         items_raw = data.get("items", "[]")
         items_list = json.loads(items_raw) if isinstance(items_raw, str) else items_raw
         created_at = datetime.now().isoformat()
@@ -268,8 +269,8 @@ async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_
 
         # Simpan transaksi setelah semua valid
         await db.execute(
-            "INSERT INTO toko_sales (id, user_id, total, items, created_at) VALUES (?, ?, ?, ?, ?)",
-            (sale_id, u_id, total, str(items_raw), created_at)
+            "INSERT INTO toko_sales (id, user_id, total, items, created_at, payment_method) VALUES (?, ?, ?, ?, ?, ?)",
+            (sale_id, u_id, total, str(items_raw), created_at, payment_method)
         )
 
         # Kurangi stok
