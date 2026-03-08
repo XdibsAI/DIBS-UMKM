@@ -39,13 +39,17 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       if (result['matched'] == true) {
         final data = Map<String, dynamic>.from(result['data'] ?? {});
         final product = Map<String, dynamic>.from(data['product'] ?? {});
-        final quantity = (data['quantity'] as num?)?.toInt() ?? 1;
 
-        provider.addToCart(product, quantity);
+        final qty = await _askQuantity();
+        if (qty == null) {
+          return;
+        }
+
+        provider.addToCart(product, qty);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Produk berhasil ditambahkan'),
+            content: Text('${product['name'] ?? 'Produk'} x$qty ditambahkan'),
             backgroundColor: Colors.green,
           ),
         );
@@ -54,28 +58,28 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
         return;
       }
 
-        final add = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Produk belum ada'),
-            content: Text('Barcode $code belum terdaftar.\nTambah produk baru?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Tambah'),
-              ),
-            ],
-          ),
-        );
+      final add = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Produk belum ada'),
+          content: Text('Barcode $code belum terdaftar.\nTambah produk baru?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Tambah'),
+            ),
+          ],
+        ),
+      );
 
-        if (add == true) {
-          Navigator.pop(context, code);
-          return;
-        }
+      if (add == true) {
+        Navigator.pop(context, code);
+        return;
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +92,40 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
       await Future.delayed(const Duration(milliseconds: 1200));
       _isProcessing = false;
     }
+  }
+
+  Future<int?> _askQuantity() async {
+    final controller = TextEditingController(text: '1');
+
+    return showDialog<int>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Jumlah Produk'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Qty',
+            hintText: 'Masukkan jumlah',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final qty = int.tryParse(controller.text.trim()) ?? 1;
+              Navigator.pop(context, qty < 1 ? 1 : qty);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -145,23 +145,28 @@ async def create_product(data: Dict, current_user: TokenData = Depends(get_curre
     try:
         u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
 
-        name = str(data.get('name', 'Produk Baru'))
+        name = str(data.get('name', 'Produk Baru')).strip()
         price = float(data.get('price', 0.0))
         stock = int(data.get('stock', 0))
-        category = str(data.get('category', 'Umum'))
-        description = str(data.get('description', ''))
+        category = str(data.get('category', 'Umum')).strip()
+        description = str(data.get('description', '')).strip()
         barcode = str(data.get('barcode', '')).strip() or None
 
-        print(f"DEBUG: u_id={type(u_id)} value={u_id}")
-        print(f"DEBUG: name={type(name)} value={name}")
-        print(f"DEBUG: price={type(price)} value={price}")
-        print(f"DEBUG: stock={type(stock)} value={stock}")
+        if barcode:
+            existing = await db.fetch_one(
+                "SELECT id, name FROM toko_products WHERE user_id = ? AND barcode = ?",
+                (u_id, barcode)
+            )
+            if existing:
+                raise HTTPException(400, f"Barcode sudah dipakai oleh produk: {existing['name']}")
 
         query = "INSERT INTO toko_products (user_id, name, price, stock, category, description, barcode) VALUES (?, ?, ?, ?, ?, ?, ?)"
         values = (u_id, name, price, stock, category, description, barcode)
 
         await db.execute(query, values)
         return {"status": "success", "message": "Product created successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Create product error: {e}")
         raise HTTPException(400, f"Error: {str(e)}")
@@ -175,11 +180,56 @@ async def delete_product(product_id: int, current_user: TokenData = Depends(get_
     except Exception as e:
         raise HTTPException(500, str(e))
 
+
+@router.put("/products/{product_id}")
+async def update_product(product_id: int, data: Dict, current_user: TokenData = Depends(get_current_user)):
+    try:
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
+
+        existing = await db.fetch_one(
+            "SELECT * FROM toko_products WHERE id = ? AND user_id = ?",
+            (product_id, u_id)
+        )
+        if not existing:
+            raise HTTPException(404, "Produk tidak ditemukan")
+
+        name = str(data.get('name', existing['name'])).strip()
+        price = float(data.get('price', existing['price']))
+        stock = int(data.get('stock', existing['stock']))
+        category = str(data.get('category', existing['category'] or 'Umum')).strip()
+        description = str(data.get('description', existing['description'] or '')).strip()
+        barcode = str(data.get('barcode', existing['barcode'] or '')).strip() or None
+
+        if barcode:
+            duplicate = await db.fetch_one(
+                "SELECT id, name FROM toko_products WHERE user_id = ? AND barcode = ? AND id != ?",
+                (u_id, barcode, product_id)
+            )
+            if duplicate:
+                raise HTTPException(400, f"Barcode sudah dipakai oleh produk: {duplicate['name']}")
+
+        await db.execute(
+            """
+            UPDATE toko_products
+            SET name = ?, price = ?, stock = ?, category = ?, description = ?, barcode = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (name, price, stock, category, description, barcode, product_id, u_id)
+        )
+
+        return {"status": "success", "message": "Product updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Update product error: {e}")
+        raise HTTPException(400, f"Error: {str(e)}")
+
 @router.post("/sales")
 async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_user)):
     try:
         import uuid, json
         from datetime import datetime
+
         u_id = str(getattr(current_user, "id", getattr(current_user, "user_id", "0")))
         sale_id = str(uuid.uuid4())
         total = int(data.get("total", 0))
@@ -187,21 +237,54 @@ async def create_sale(data: Dict, current_user: TokenData = Depends(get_current_
         items_list = json.loads(items_raw) if isinstance(items_raw, str) else items_raw
         created_at = datetime.now().isoformat()
 
+        if not items_list:
+            raise HTTPException(400, "Keranjang kosong")
+
+        # Validasi stok dulu sebelum simpan transaksi
+        for item in items_list:
+            p_id = item.get("id")
+            qty = int(item.get("qty", item.get("quantity", 0)))
+
+            if not p_id:
+                raise HTTPException(400, "Produk pada transaksi tidak valid")
+
+            if qty < 1:
+                raise HTTPException(400, "Quantity produk minimal 1")
+
+            product = await db.fetch_one(
+                "SELECT id, name, stock FROM toko_products WHERE id = ? AND user_id = ?",
+                (p_id, u_id)
+            )
+
+            if not product:
+                raise HTTPException(404, f"Produk dengan id {p_id} tidak ditemukan")
+
+            current_stock = int(product["stock"] or 0)
+            if current_stock < qty:
+                raise HTTPException(
+                    400,
+                    f"Stok tidak cukup untuk {product['name']}. Tersedia: {current_stock}, diminta: {qty}"
+                )
+
+        # Simpan transaksi setelah semua valid
         await db.execute(
             "INSERT INTO toko_sales (id, user_id, total, items, created_at) VALUES (?, ?, ?, ?, ?)",
             (sale_id, u_id, total, str(items_raw), created_at)
         )
 
+        # Kurangi stok
         for item in items_list:
             p_id = item.get("id")
             qty = int(item.get("qty", item.get("quantity", 0)))
-            if p_id:
-                await db.execute(
-                    "UPDATE toko_products SET stock = stock - ? WHERE id = ? AND user_id = ?",
-                    (qty, p_id, u_id)
-                )
+
+            await db.execute(
+                "UPDATE toko_products SET stock = stock - ? WHERE id = ? AND user_id = ?",
+                (qty, p_id, u_id)
+            )
 
         return {"status": "success", "message": "Sale recorded & stock updated", "sale_id": sale_id}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Sale Error: {e}")
         raise HTTPException(400, f"Gagal transaksi: {str(e)}")

@@ -466,12 +466,25 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await Navigator.push(
+                        final scannedCode = await Navigator.push<String>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const BarcodeScannerScreen(),
                           ),
                         );
+
+                        if (!context.mounted) return;
+
+                        if (scannedCode != null && scannedCode.isNotEmpty) {
+                          _showAddProductDialog(
+                            context,
+                            iconColor,
+                            textColor,
+                            secondaryTextColor,
+                            surfaceColor,
+                            initialBarcode: scannedCode,
+                          );
+                        }
                       },
                       icon: const Icon(Icons.qr_code_scanner, color: Colors.black),
                       label: const Text(
@@ -526,9 +539,9 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                         ],
                         rows: cartItems.map((item) => DataRow(
                           cells: [
-                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DataCell(Text('${item['quantity']}', style: TextStyle(color: Colors.white))),
-                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text(item['name'] ?? '', style: TextStyle(color: textColor, fontSize: 13))),
+                            DataCell(Text('${item['quantity']}', style: TextStyle(color: textColor))),
+                            DataCell(Text('Rp ${_formatNumber(item['subtotal'] ?? 0)}', style: TextStyle(color: textColor))),
                             DataCell(IconButton(
                               icon: Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 18),
                               onPressed: () => provider.decrementCartItem(item['id']),
@@ -769,9 +782,9 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                         ],
                         rows: products.map((product) => DataRow(
                           cells: [
-                            DataCell(Text(product['name'] ?? '', style: TextStyle(color: Colors.white, fontSize: 13))),
-                            DataCell(Text('${product['stock'] ?? 0}', style: TextStyle(color: Colors.white))),
-                            DataCell(Text('Rp ${_formatNumber(product['price'] ?? 0)}', style: TextStyle(color: Colors.white))),
+                            DataCell(Text(product['name'] ?? '', style: TextStyle(color: textColor, fontSize: 13))),
+                            DataCell(Text('${product['stock'] ?? 0}', style: TextStyle(color: textColor))),
+                            DataCell(Text('Rp ${_formatNumber(product['price'] ?? 0)}', style: TextStyle(color: textColor))),
                             DataCell(IconButton(
                               icon: Icon(Icons.add_circle, color: Colors.green, size: 18),
                               onPressed: () { provider.addToCart(product, 1); },
@@ -910,6 +923,7 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     final TextEditingController voiceController = TextEditingController();
     bool isProcessing = false;
 
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1011,16 +1025,32 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
     Color iconColor,
     Color textColor,
     Color secondaryTextColor,
-    Color surfaceColor,
-  ) {
+    Color surfaceColor, {
+    String? initialBarcode,
+  }) {
     final nameController = TextEditingController();
     final priceController = TextEditingController();
     final stockController = TextEditingController();
-    final barcodeController = TextEditingController();
+    final barcodeController = TextEditingController(text: initialBarcode ?? '');
     final inputColor = Theme.of(context).brightness == Brightness.dark 
         ? const Color(0xFF0A0A0F) 
         : Colors.grey.shade100;
 
+    
+    Future<void> autofillFromBarcode() async {
+      if (initialBarcode == null || initialBarcode!.trim().isEmpty) return;
+
+      final result = await ApiService.lookupProductByBarcode(initialBarcode!.trim());
+      if (result != null && result['name'] != null) {
+        final productName = result['name'].toString().trim();
+        if (productName.isNotEmpty && nameController.text.trim().isEmpty) {
+          nameController.text = productName;
+        }
+      }
+    }
+
+    autofillFromBarcode();
+    
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
