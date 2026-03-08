@@ -1,5 +1,6 @@
 import 'voice_scan_dialog.dart';
 import 'barcode_scanner_screen.dart';
+import 'qris_payment_screen.dart';
 import '../../services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -1368,75 +1369,15 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
   }
 
   void _processCheckout(BuildContext context, TokoProvider provider, Color iconColor) {
-    final textColor = Theme.of(context).brightness == Brightness.dark 
-        ? Colors.white 
-        : Colors.black87;
-    final secondaryTextColor = Theme.of(context).brightness == Brightness.dark 
-        ? Colors.grey.shade400 
-        : Colors.grey.shade600;
-    final surfaceColor = Theme.of(context).brightness == Brightness.dark 
-        ? const Color(0xFF1A1A2E) 
-        : Colors.white;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: surfaceColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Proses Pembayaran', style: TextStyle(color: textColor)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Total: Rp ${_formatNumber(provider.cartTotal)}',
-              style: TextStyle(
-                color: iconColor,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Konfirmasi pembayaran?',
-              style: TextStyle(color: secondaryTextColor),
-            ),
-          ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QrisPaymentScreen(
+          totalAmount: provider.cartTotal,
+          onPaymentConfirmed: () async {
+            await provider.checkout();
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Batal', style: TextStyle(color: secondaryTextColor)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await provider.checkout();
-              Navigator.pop(ctx);
-              
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: const [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text('✅ Transaksi berhasil!'),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: iconColor,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Bayar'),
-          ),
-        ],
       ),
     );
   }

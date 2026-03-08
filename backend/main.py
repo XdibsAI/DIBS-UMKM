@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import asyncio
@@ -153,6 +154,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Static uploads
+app.mount("/uploads", StaticFiles(directory=str(settings.UPLOADS_DIR)), name="uploads")
 
 # Include routers
 app.include_router(auth_router)

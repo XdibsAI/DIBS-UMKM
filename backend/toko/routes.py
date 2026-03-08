@@ -333,3 +333,68 @@ async def scan_barcode_for_sale(data: Dict, current_user: TokenData = Depends(ge
     except Exception as e:
         logger.error(f"Scan barcode sale error: {e}")
         raise HTTPException(400, f"Gagal scan barcode: {str(e)}")
+
+@router.get("/payment-settings")
+async def get_payment_settings(current_user: TokenData = Depends(get_current_user)):
+    try:
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
+        row = await db.fetch_one(
+            "SELECT * FROM toko_payment_settings WHERE user_id = ?",
+            (u_id,)
+        )
+
+        return {
+            "status": "success",
+            "data": dict(row) if row else {
+                "user_id": u_id,
+                "qris_image_url": None,
+                "bank_name": "",
+                "account_name": "",
+                "account_number": ""
+            }
+        }
+    except Exception as e:
+        logger.error(f"Get payment settings error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@router.post("/payment-settings")
+async def save_payment_settings(data: Dict, current_user: TokenData = Depends(get_current_user)):
+    try:
+        from datetime import datetime
+
+        u_id = str(getattr(current_user, 'id', getattr(current_user, 'user_id', '0')))
+        qris_image_url = str(data.get('qris_image_url', '')).strip() or None
+        bank_name = str(data.get('bank_name', '')).strip()
+        account_name = str(data.get('account_name', '')).strip()
+        account_number = str(data.get('account_number', '')).strip()
+        updated_at = datetime.now().isoformat()
+
+        existing = await db.fetch_one(
+            "SELECT user_id FROM toko_payment_settings WHERE user_id = ?",
+            (u_id,)
+        )
+
+        if existing:
+            await db.execute(
+                """
+                UPDATE toko_payment_settings
+                SET qris_image_url = ?, bank_name = ?, account_name = ?, account_number = ?, updated_at = ?
+                WHERE user_id = ?
+                """,
+                (qris_image_url, bank_name, account_name, account_number, updated_at, u_id)
+            )
+        else:
+            await db.execute(
+                """
+                INSERT INTO toko_payment_settings
+                (user_id, qris_image_url, bank_name, account_name, account_number, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (u_id, qris_image_url, bank_name, account_name, account_number, updated_at)
+            )
+
+        return {"status": "success", "message": "Payment settings saved"}
+    except Exception as e:
+        logger.error(f"Save payment settings error: {e}")
+        raise HTTPException(400, str(e))

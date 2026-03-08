@@ -372,4 +372,15 @@ class ApiService {
     return null;
   }
 
+
+
+  // ==================== TOKO PAYMENT ====================
+  static Future<Map<String, dynamic>> getTokoPaymentSettings() async {
+    return _get('/toko/payment-settings');
+  }
+
+  static Future<Map<String, dynamic>> saveTokoPaymentSettings(Map<String, dynamic> data) async {
+    return _post('/toko/payment-settings', data);
+  }
+
 }
