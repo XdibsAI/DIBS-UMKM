@@ -195,29 +195,65 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
           ElevatedButton(
             onPressed: () async {
+              final email = emailController.text.trim();
+              final oldPassword = oldPasswordController.text;
+              final newPassword = newPasswordController.text;
+
+              if (email.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Email, password lama, dan password baru wajib diisi'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+
+              if (oldPassword == newPassword) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password baru harus berbeda dari password lama'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
+
               Navigator.pop(ctx);
 
+              BuildContext? loadingCtx;
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (ctx) => const Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
-                  ),
-                ),
+                useRootNavigator: true,
+                builder: (dialogContext) {
+                  loadingCtx = dialogContext;
+                  return const Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
+                    ),
+                  );
+                },
               );
 
               try {
                 final res = await ApiService.resetPassword(
-                  emailController.text,
-                  oldPasswordController.text,
-                  newPasswordController.text,
+                  email,
+                  oldPassword,
+                  newPassword,
                 );
 
-                if (!context.mounted) return;
-                Navigator.pop(context);
+                if (loadingCtx != null && Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
+                  Navigator.of(loadingCtx!, rootNavigator: true).pop();
+                }
+
+                if (!mounted) return;
 
                 if (res['status'] == 'success') {
+                  _passwordController.clear();
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('✅ Password updated! Silakan login dengan password baru'),
@@ -230,19 +266,22 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                   );
                 } else {
-                  throw Exception(res['message'] ?? 'Gagal reset password');
+                  throw Exception(res['message'] ?? res['detail'] ?? 'Gagal reset password');
                 }
               } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                if (loadingCtx != null && Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
+                  Navigator.of(loadingCtx!, rootNavigator: true).pop();
                 }
+
+                if (!mounted) return;
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error: $e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(

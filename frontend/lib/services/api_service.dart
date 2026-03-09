@@ -103,11 +103,25 @@ class ApiService {
     return _post('/auth/register', {'email': email, 'password': password, 'display_name': displayName});
   }
 
-  static Future<Map<String, dynamic>> resetPassword(String email, String oldPassword, String newPassword) async {
+  static Future<Map<String, dynamic>> resetPassword(
+    String email,
+    String oldPassword,
+    String newPassword,
+  ) async {
+    final encodedEmail = Uri.encodeComponent(email);
+    final encodedOldPassword = Uri.encodeComponent(oldPassword);
+    final encodedNewPassword = Uri.encodeComponent(newPassword);
+
     final res = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/auth/reset-password?email=$email&old_password=$oldPassword&new_password=$newPassword'),
+      Uri.parse(
+        '${ApiConfig.baseUrl}/auth/reset-password'
+        '?email=$encodedEmail'
+        '&old_password=$encodedOldPassword'
+        '&new_password=$encodedNewPassword',
+      ),
       headers: {'Content-Type': 'application/json'},
     ).timeout(Duration(seconds: ApiConfig.connectionTimeout));
+
     return jsonDecode(res.body);
   }
 

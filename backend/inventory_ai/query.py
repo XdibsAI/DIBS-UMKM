@@ -25,13 +25,19 @@ def normalize_text(text: str) -> str:
     text = re.sub(r'(\d)\s*kg\b', r'\1 kg', text)
     text = re.sub(r'(\d)\s*liter\b', r'\1 liter', text)
     text = re.sub(r'(\d)\s*ml\b', r'\1 ml', text)
-    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    text = re.sub(r'[^a-z0-9\s,]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 
 def tokenize(text: str) -> List[str]:
     return [t for t in normalize_text(text).split() if len(t) >= 2]
+
+
+def parse_aliases(raw_aliases: str) -> List[str]:
+    if not raw_aliases:
+        return []
+    return [normalize_text(x) for x in str(raw_aliases).split(",") if normalize_text(x)]
 
 
 def _size_patterns(size_value: Optional[float], size_unit: Optional[str]) -> List[str]:
@@ -52,11 +58,11 @@ def _size_patterns(size_value: Optional[float], size_unit: Optional[str]) -> Lis
     if unit == "liter":
         patterns.extend([f"{value_text} l", f"{value_text}l", f"{value_text} liter"])
     elif unit == "gr":
-        patterns.extend([f"{value_text} g", f"{value_text}g", f"{value_text} gr"])
+        patterns.extend([f"{value_text} g", f"{value_text}g", f"{value_text} gr", f"{value_text} gram"])
     elif unit == "kg":
-        patterns.extend([f"{value_text} kilo", f"{value_text} kilogram", f"{value_text}kg"])
+        patterns.extend([f"{value_text} kilo", f"{value_text} kilogram", f"{value_text}kg", f"{value_text} kg"])
     elif unit == "pcs":
-        patterns.extend([f"{value_text} pc", f"{value_text}pcs"])
+        patterns.extend([f"{value_text} pc", f"{value_text}pcs", f"{value_text} pcs"])
 
     return list(dict.fromkeys(normalize_text(p) for p in patterns))
 
@@ -64,6 +70,7 @@ def _size_patterns(size_value: Optional[float], size_unit: Optional[str]) -> Lis
 def score_product_match(
     product_name: str,
     product_normalized_name: str,
+    product_aliases: str,
     product_barcode: str,
     product_query: str,
     size_value: Optional[float],
@@ -71,6 +78,7 @@ def score_product_match(
 ) -> int:
     name_norm = normalize_text(product_name)
     normalized_name = normalize_text(product_normalized_name or product_name)
+    aliases = parse_aliases(product_aliases)
     barcode_norm = normalize_text(product_barcode)
     query_norm = normalize_text(product_query)
     query_tokens = tokenize(product_query)
@@ -81,38 +89,48 @@ def score_product_match(
         score += 1
 
     if query_norm and query_norm == normalized_name:
-        score += 140
+        score += 150
     elif query_norm and query_norm == name_norm:
+        score += 130
+    elif query_norm and query_norm in aliases:
         score += 120
 
     if query_norm and query_norm in normalized_name:
-        score += 80
+        score += 90
     elif query_norm and query_norm in name_norm:
-        score += 60
+        score += 70
+    elif query_norm and any(query_norm in alias for alias in aliases):
+        score += 80
 
     matched_tokens = 0
     for token in query_tokens:
         if token in normalized_name:
             matched_tokens += 1
-            score += 15
+            score += 16
         elif token in name_norm:
             matched_tokens += 1
-            score += 12
+            score += 13
+        elif any(token in alias for alias in aliases):
+            matched_tokens += 1
+            score += 14
         elif token in barcode_norm:
             matched_tokens += 1
-            score += 20
+            score += 25
 
     if query_tokens and matched_tokens == len(query_tokens):
-        score += 30
+        score += 35
     elif query_tokens and matched_tokens >= max(1, len(query_tokens) - 1):
-        score += 10
+        score += 12
 
     size_patterns = _size_patterns(size_value, size_unit)
     if size_patterns:
-        if any(p in normalized_name for p in size_patterns):
+        size_match = (
+            any(p in normalized_name for p in size_patterns)
+            or any(p in name_norm for p in size_patterns)
+            or any(any(p in alias for p in size_patterns) for alias in aliases)
+        )
+        if size_match:
             score += 45
-        elif any(p in name_norm for p in size_patterns):
-            score += 30
         else:
             score -= 15
 
@@ -127,13 +145,12 @@ async def search_inventory_products(
     size_unit: Optional[str] = None,
     limit: int = 8,
 ) -> List[Dict]:
-    query_norm = normalize_text(product_query)
     query_tokens = tokenize(product_query)
 
     rows = []
     if query_tokens:
         sql = """
-        SELECT id, name, normalized_name, stock, price, barcode
+        SELECT id, name, normalized_name, aliases, stock, price, barcode
         FROM toko_products
         WHERE user_id = ?
           AND (
@@ -144,23 +161,25 @@ async def search_inventory_products(
         for token in query_tokens[:5]:
             conditions.append("LOWER(COALESCE(normalized_name, name)) LIKE ?")
             params.append(f"%{token}%")
+            conditions.append("LOWER(COALESCE(aliases, '')) LIKE ?")
+            params.append(f"%{token}%")
 
         sql += " OR ".join(conditions)
         sql += """
           )
         ORDER BY name ASC
-        LIMIT 200
+        LIMIT 250
         """
         rows = await db.fetch_all(sql, tuple(params))
 
     if not rows:
         rows = await db.fetch_all(
             """
-            SELECT id, name, normalized_name, stock, price, barcode
+            SELECT id, name, normalized_name, aliases, stock, price, barcode
             FROM toko_products
             WHERE user_id = ?
             ORDER BY name ASC
-            LIMIT 700
+            LIMIT 800
             """,
             (user_id,),
         )
@@ -171,8 +190,9 @@ async def search_inventory_products(
         score = score_product_match(
             item.get("name", ""),
             item.get("normalized_name", ""),
+            item.get("aliases", ""),
             item.get("barcode", ""),
-            query_norm,
+            product_query,
             size_value,
             size_unit,
         )
@@ -193,7 +213,7 @@ async def search_inventory_products(
 async def get_low_stock_products_local(db, user_id: str, threshold: int = 5, limit: int = 10) -> List[Dict]:
     rows = await db.fetch_all(
         """
-        SELECT id, name, normalized_name, stock, price, barcode
+        SELECT id, name, normalized_name, aliases, stock, price, barcode
         FROM toko_products
         WHERE user_id = ? AND stock <= ?
         ORDER BY stock ASC, name ASC
@@ -216,9 +236,11 @@ def build_stock_response(product_query: str, products: List[Dict]) -> str:
     if not products:
         return f"Stok untuk '{product_query}' tidak ditemukan."
 
-    if len(products) == 1 or (products and products[0].get("match_score", 0) >= 120 and (
-        len(products) == 1 or products[0].get("match_score", 0) - products[1].get("match_score", 0) >= 25
-    )):
+    if len(products) == 1 or (
+        products
+        and products[0].get("match_score", 0) >= 120
+        and (len(products) == 1 or products[0].get("match_score", 0) - products[1].get("match_score", 0) >= 25)
+    ):
         item = products[0]
         return f"Stok {item.get('name', 'produk')} tersisa {item.get('stock', 0)} pcs."
 
@@ -232,9 +254,11 @@ def build_price_response(product_query: str, products: List[Dict]) -> str:
     if not products:
         return f"Harga untuk '{product_query}' tidak ditemukan."
 
-    if len(products) == 1 or (products and products[0].get("match_score", 0) >= 120 and (
-        len(products) == 1 or products[0].get("match_score", 0) - products[1].get("match_score", 0) >= 25
-    )):
+    if len(products) == 1 or (
+        products
+        and products[0].get("match_score", 0) >= 120
+        and (len(products) == 1 or products[0].get("match_score", 0) - products[1].get("match_score", 0) >= 25)
+    ):
         item = products[0]
         return f"Harga {item.get('name', 'produk')} adalah {format_rupiah(item.get('price', 0))}."
 
