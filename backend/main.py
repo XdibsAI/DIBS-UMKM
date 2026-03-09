@@ -50,6 +50,7 @@ from toko.routes import router as toko_router, set_database as set_toko_db
 from social.routes import router as social_router, set_database as set_social_db
 from business_brain.routes import router as business_brain_router, set_database as set_business_brain_db
 from inventory_ai.routes import router as inventory_ai_router
+from inventory_ai.import_export_routes import router as inventory_import_export_router
 from nvidia_routes import router as nvidia_router
 # Try import dibs_routes, but don't fail if not exists
 try:
@@ -171,6 +172,7 @@ app.include_router(toko_router)
 app.include_router(social_router)
 app.include_router(business_brain_router)
 app.include_router(inventory_ai_router)
+app.include_router(inventory_import_export_router)
 app.include_router(nvidia_router)
 if dibs_router_available:
     app.include_router(dibs_router)
