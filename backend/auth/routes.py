@@ -1,11 +1,18 @@
-from utils.errors import handle_errors, AuthError, ValidationError
+from utils.errors import handle_errors
 """Authentication Routes"""
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 import logging
+from pydantic import BaseModel
 
 from .models import UserCreate, UserLogin, LoginResponse
-from .utils import hash_password, verify_password, create_access_token, get_current_user, TokenData
+from .utils import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
+    TokenData,
+)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 logger = logging.getLogger('DIBS1')
@@ -13,32 +20,50 @@ logger = logging.getLogger('DIBS1')
 # Database will be injected
 db = None
 
+
 def set_database(database):
     global db
     db = database
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    old_password: str
+    new_password: str
+
 
 @router.post("/register")
 @handle_errors
 async def register(user: UserCreate):
     """Register new user"""
     try:
-        # Check if user exists
-        existing = await db.fetch_one("SELECT * FROM users WHERE email = ?", (user.email,))
+        existing = await db.fetch_one(
+            "SELECT * FROM users WHERE email = ?",
+            (user.email,),
+        )
         if existing:
             raise HTTPException(400, "Email already registered")
 
-        # Hash password
         password_hash = hash_password(user.password)
 
-        # Insert user with gender
         import uuid
         user_id = str(uuid.uuid4())
+
         await db.execute(
-            "INSERT INTO users (id, email, password_hash, display_name, gender, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (user_id, user.email, password_hash, user.display_name, user.gender, datetime.utcnow().isoformat())
+            """
+            INSERT INTO users (id, email, password_hash, display_name, gender, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                user.email,
+                password_hash,
+                user.display_name,
+                user.gender,
+                datetime.utcnow().isoformat(),
+            ),
         )
 
-        # Create token
         token = create_access_token({"user_id": user_id, "email": user.email})
 
         logger.info(f"✅ User registered: {user.email} (Gender: {user.gender})")
@@ -49,8 +74,8 @@ async def register(user: UserCreate):
                 user_id=user_id,
                 email=user.email,
                 display_name=user.display_name,
-                gender=user.gender  # TAMBAH
-            )
+                gender=user.gender,
+            ),
         }
     except HTTPException:
         raise
@@ -58,26 +83,25 @@ async def register(user: UserCreate):
         logger.error(f"Register error: {e}")
         raise HTTPException(500, str(e))
 
+
 @router.post("/login")
 @handle_errors
 async def login(credentials: UserLogin):
     """User login"""
     try:
-        # Get user
-        user = await db.fetch_one("SELECT * FROM users WHERE email = ?", (credentials.email,))
+        user = await db.fetch_one(
+            "SELECT * FROM users WHERE email = ?",
+            (credentials.email,),
+        )
         if not user:
             raise HTTPException(401, "Invalid credentials")
 
-        # Verify password
         if not verify_password(credentials.password, user['password_hash']):
             raise HTTPException(401, "Invalid credentials")
 
-        # Create token
         token = create_access_token({"user_id": user['id'], "email": user['email']})
-
-        # Convert Row to dict agar bisa akses dengan .get()
         user_dict = dict(user)
-        
+
         logger.info(f"✅ Login: {credentials.email}")
         return {
             "status": "success",
@@ -86,8 +110,8 @@ async def login(credentials: UserLogin):
                 user_id=user_dict['id'],
                 email=user_dict['email'],
                 display_name=user_dict.get('display_name', 'User'),
-                gender=user_dict.get('gender', 'unknown')  # AMAN karena pakai .get() dari dict
-            )
+                gender=user_dict.get('gender', 'unknown'),
+            ),
         }
     except HTTPException:
         raise
@@ -95,42 +119,77 @@ async def login(credentials: UserLogin):
         logger.error(f"Login error: {e}")
         raise HTTPException(500, str(e))
 
+
 @router.post("/reset-password")
-async def reset_password(email: str, old_password: str, new_password: str):
-    """Reset password"""
+@handle_errors
+async def reset_password(payload: ResetPasswordRequest):
+    """Reset password via JSON body"""
     try:
-        user = await db.fetch_one("SELECT * FROM users WHERE email = ?", (email,))
+        email = payload.email.strip().lower()
+        old_password = payload.old_password
+        new_password = payload.new_password
+
+        if not email or not old_password or not new_password:
+            raise HTTPException(400, "Email, password lama, dan password baru wajib diisi")
+
+        if old_password == new_password:
+            raise HTTPException(400, "Password baru harus berbeda dari password lama")
+
+        if len(new_password) < 6:
+            raise HTTPException(400, "Password baru minimal 6 karakter")
+
+        user = await db.fetch_one(
+            "SELECT * FROM users WHERE email = ?",
+            (email,),
+        )
         if not user:
-            raise HTTPException(401, "Invalid credentials")
+            raise HTTPException(404, "User tidak ditemukan")
 
         if not verify_password(old_password, user['password_hash']):
-            raise HTTPException(401, "Old password incorrect")
+            raise HTTPException(401, "Password lama salah")
 
         new_hash = hash_password(new_password)
-        await db.execute("UPDATE users SET password_hash = ? WHERE email = ?", (new_hash, email))
+
+        await db.execute(
+            "UPDATE users SET password_hash = ? WHERE email = ?",
+            (new_hash, email),
+        )
 
         logger.info(f"✅ Password reset: {email}")
-        return {"status": "success", "message": "Password updated successfully"}
+        return {
+            "status": "success",
+            "message": "Password berhasil diperbarui",
+            "data": {
+                "email": email,
+            },
+        }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Reset password error: {e}")
         raise HTTPException(500, str(e))
 
+
 @router.get("/me")
 async def get_current_user_info(current_user: TokenData = Depends(get_current_user)):
     """Get current user info"""
-    user = await db.fetch_one("SELECT * FROM users WHERE id = ?", (current_user.user_id,))
+    user = await db.fetch_one(
+        "SELECT * FROM users WHERE id = ?",
+        (current_user.user_id,),
+    )
     if not user:
         raise HTTPException(404, "User not found")
+
+    user_dict = dict(user)
+
     return {
         "status": "success",
         "data": {
-            "id": user['id'],
-            "email": user['email'],
-            "display_name": user['display_name'],
-            "gender": user.get('gender', '')  # TAMBAH
-        }
+            "id": user_dict['id'],
+            "email": user_dict['email'],
+            "display_name": user_dict.get('display_name', ''),
+            "gender": user_dict.get('gender', ''),
+        },
     }
 
 
@@ -141,7 +200,6 @@ async def verify_token(current_user: TokenData = Depends(get_current_user)):
         "status": "success",
         "data": {
             "user_id": current_user.user_id,
-            "email": current_user.email
-        }
+            "email": current_user.email,
+        },
     }
-

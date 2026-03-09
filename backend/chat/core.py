@@ -1,30 +1,30 @@
-"""Chat AI Core - Dual Provider (Ollama + Nemotron via OpenAI SDK)"""
+"""Chat AI Core - Multi Provider (Nemotron, Kimi, Ollama)"""
+
 import logging
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
 import time
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
-import re
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
-import os
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
-from typing import List, Dict, Optional, Tuple
-from openai import OpenAI
+from typing import Dict, List, Optional
+
 import httpx
-from config.settings import ollama_url, ollama_timeout, ai_model, nvidia_api_key, use_nvidia, nvidia_model, nvidia_max_tokens, nvidia_temperature
+from openai import OpenAI
 
 from chat.kimi_ai import KimiAI
 from config.settings import (
-    ollama_url, ollama_timeout, ai_model,
-    nvidia_api_key, use_nvidia,
-    use_kimi, kimi_model,
-    host, port, db_path
+    ai_model,
+    kimi_model,
+    nvidia_api_key,
+    ollama_timeout,
+    ollama_url,
+    use_kimi,
+    use_nvidia,
 )
 
-logger = logging.getLogger('DIBS1')
+logger = logging.getLogger("DIBS1")
+
 
 # ============================================================================
-# SYSTEM PROMPT - Fleksibel, tanpa paksaan salam berulang
+# SYSTEM PROMPT
 # ============================================================================
+
 BASE_SYSTEM_PROMPT = """CRITICAL IDENTITY RULES:
 1. You are DIBS AI (Digital Intelligent Business System)
 2. Your name is DIBS - NEVER say you are other AI models (Nemotron, Llama, etc.)
@@ -55,246 +55,289 @@ DIBS: "DIBS adalah Digital Intelligent Business System untuk membantu UMKM Indon
 Keep responses under 200 words, be helpful & friendly.
 """
 
+
 # ============================================================================
-# LANGUAGE DETECTION (Sederhana)
+# LANGUAGE DETECTOR
 # ============================================================================
+
 class LanguageDetector:
-    """Deteksi bahasa user"""
-    
-    # Kata kunci sederhana
-    JAVA_KEYWORDS = ['piye', 'opo', 'ning', 'wis', 'durung', 'saiki', 'kowe', 'aku', 'mbak', 'mas']
-    SUNDA_KEYWORDS = ['kumaha', 'naon', 'saha', 'iraha', 'dimana', 'abdi', 'anjeun']
-    
+    """Deteksi bahasa sederhana."""
+
+    JAVA_KEYWORDS = [
+        "piye", "opo", "ning", "wis", "durung",
+        "saiki", "kowe", "aku", "mbak", "mas"
+    ]
+    SUNDA_KEYWORDS = [
+        "kumaha", "naon", "saha", "iraha",
+        "abdi", "anjeun"
+    ]
+
     @staticmethod
     def detect(text: str) -> str:
-        """Deteksi bahasa dari teks"""
-        text_lower = text.lower()
-        
+        text_lower = (text or "").lower()
+
         java_score = sum(1 for word in LanguageDetector.JAVA_KEYWORDS if word in text_lower)
         sunda_score = sum(1 for word in LanguageDetector.SUNDA_KEYWORDS if word in text_lower)
-        
+
         if java_score > sunda_score and java_score > 0:
             return "jawa"
-        elif sunda_score > java_score and sunda_score > 0:
+        if sunda_score > java_score and sunda_score > 0:
             return "sunda"
-        else:
-            # Default ke Indonesia/Inggris (model akan menyesuaikan)
-            return "indonesia"
+        return "indonesia"
+
 
 # ============================================================================
-# NEMOTRON PROVIDER (NVIDIA)
+# BASE PROVIDER
 # ============================================================================
-class NemotronAI:
-    """Nemotron via NVIDIA API using OpenAI SDK"""
+
+class BaseProvider:
+    """Base class untuk session-aware greeting logic."""
 
     def __init__(self):
+        self.conversation_history: Dict[str, int] = {}
+
+    def is_first_message(self, session_id: Optional[str]) -> bool:
+        if not session_id:
+            return False
+
+        if session_id not in self.conversation_history:
+            self.conversation_history[session_id] = 1
+            return True
+
+        self.conversation_history[session_id] += 1
+        return False
+
+    def build_system_prompt(
+        self,
+        prompt: str,
+        session_id: Optional[str] = None,
+        system_prompt: Optional[str] = None,
+    ) -> str:
+        language = LanguageDetector.detect(prompt)
+        final_system = system_prompt or BASE_SYSTEM_PROMPT
+
+        if self.is_first_message(session_id):
+            final_system += "\n\nThis is the FIRST message in conversation. You may greet the user."
+        else:
+            final_system += "\n\nThis is a FOLLOW-UP message. DO NOT repeat greetings. Answer directly."
+
+        final_system += f"\n\nUser is speaking in {language.upper()} language. Respond in the SAME language."
+        return final_system
+
+
+# ============================================================================
+# NEMOTRON PROVIDER
+# ============================================================================
+
+class NemotronAI(BaseProvider):
+    """Nemotron via NVIDIA API using OpenAI SDK."""
+
+    def __init__(self):
+        super().__init__()
         self.api_key = nvidia_api_key
+        self.model = "nvidia/nemotron-3-nano-30b-a3b"
+
         if not self.api_key:
-            logger.warning("⚠️ NVIDIA API key not configured")
             self.client = None
+            logger.warning("⚠️ NVIDIA API key not configured")
         else:
             self.client = OpenAI(
                 api_key=self.api_key,
-                base_url="https://integrate.api.nvidia.com/v1"
+                base_url="https://integrate.api.nvidia.com/v1",
             )
-            self.model = "nvidia/nemotron-3-nano-30b-a3b"
-            self.conversation_history = {}  # Untuk track first message per session
             logger.info("✅ Nemotron initialized")
 
-    def is_first_message(self, session_id: str) -> bool:
-        """Cek apakah ini pesan pertama di session"""
-        if session_id not in self.conversation_history:
-            self.conversation_history[session_id] = 1
-            return True
-        else:
-            self.conversation_history[session_id] += 1
-            return False
-
-    async def generate(self, prompt: str, session_id: str = None, context: List[Dict] = None, system_prompt: str = None) -> str:
-        """Generate using Nemotron via OpenAI SDK"""
+    async def generate(
+        self,
+        prompt: str,
+        session_id: Optional[str] = None,
+        context: Optional[List[Dict]] = None,
+        system_prompt: Optional[str] = None,
+    ) -> str:
         if not self.client:
-            return "❌ Nemotron tidak aktif. Periksa API key."
+            raise RuntimeError("Nemotron client not available")
 
-        try:
-            # Deteksi bahasa
-            language = LanguageDetector.detect(prompt)
-            
-            # Customize system prompt based on first message
-            final_system = system_prompt or BASE_SYSTEM_PROMPT
-            if session_id and self.is_first_message(session_id):
-                # First message - boleh pakai salam
-                final_system += "\n\nThis is the FIRST message in conversation. You may greet the user."
-            else:
-                # Follow-up - jangan pakai salam
-                final_system += "\n\nThis is a FOLLOW-UP message. DO NOT repeat greetings. Answer directly."
+        final_system = self.build_system_prompt(prompt, session_id, system_prompt)
+        language = LanguageDetector.detect(prompt)
 
-            # Tambah instruksi bahasa
-            final_system += f"\n\nUser is speaking in {language.upper()} language. Respond in the SAME language."
+        messages = [{"role": "system", "content": final_system}]
+        if context:
+            messages.extend(context[-8:])
+        messages.append({"role": "user", "content": prompt})
 
-            messages = [{"role": "system", "content": final_system}]
+        logger.info(f"📝 Using Nemotron with {language.upper()}")
 
-            if context:
-                # Ambil 8 pesan terakhir untuk konteks
-                messages.extend(context[-8:])
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            max_tokens=2048,
+            temperature=0.8,
+            timeout=60.0,
+        )
 
-            messages.append({"role": "user", "content": prompt})
+        content = response.choices[0].message.content
+        logger.info(f"✅ Nemotron response ({len(content)} chars)")
+        return content
 
-            logger.info(f"📝 Using Nemotron with {language.upper()}")
-
-            # Use sync client (OpenAI SDK handles async internally)
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=2048,
-                temperature=0.8,
-                timeout=60.0
-            )
-
-            content = response.choices[0].message.content
-            logger.info(f"✅ Nemotron response ({len(content)} chars)")
-            return content
-
-        except Exception as e:
-            logger.error(f"❌ Nemotron error: {e}")
-            raise
 
 # ============================================================================
-# OLLAMA PROVIDER (Local)
+# OLLAMA PROVIDER
 # ============================================================================
-class OllamaAI:
-    """Ollama Local Provider"""
+
+class OllamaAI(BaseProvider):
+    """Ollama local provider."""
 
     def __init__(self):
+        super().__init__()
         self.url = ollama_url
         self.model = ai_model
         self.timeout = ollama_timeout
-        self.conversation_history = {}
 
-    def is_first_message(self, session_id: str) -> bool:
-        """Cek apakah ini pesan pertama di session"""
-        if session_id not in self.conversation_history:
-            self.conversation_history[session_id] = 1
-            return True
-        else:
-            self.conversation_history[session_id] += 1
-            return False
+    async def generate(
+        self,
+        prompt: str,
+        session_id: Optional[str] = None,
+        context: Optional[List[Dict]] = None,
+        system_prompt: Optional[str] = None,
+    ) -> str:
+        final_system = self.build_system_prompt(prompt, session_id, system_prompt)
+        language = LanguageDetector.detect(prompt)
 
-    async def generate(self, prompt: str, session_id: str = None, context: List[Dict] = None, system_prompt: str = None) -> str:
-        """Generate using Ollama"""
-        try:
-            # Deteksi bahasa
-            language = LanguageDetector.detect(prompt)
-            
-            # Customize system prompt
-            final_system = system_prompt or BASE_SYSTEM_PROMPT
-            if session_id and self.is_first_message(session_id):
-                final_system += "\n\nFIRST MESSAGE - You may greet."
-            else:
-                final_system += "\n\nFOLLOW-UP - Answer directly, no greetings."
+        messages = [{"role": "system", "content": final_system}]
+        if context:
+            messages.extend(context[-8:])
+        messages.append({"role": "user", "content": prompt})
 
-            final_system += f"\n\nUse {language.upper()} language."
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.url}/api/chat",
+                json={
+                    "model": self.model,
+                    "messages": messages,
+                    "stream": False,
+                    "options": {
+                        "num_predict": 512,
+                        "temperature": 0.7,
+                        "num_ctx": 4096,
+                    },
+                },
+            )
 
-            messages = [{"role": "system", "content": final_system}]
+        if response.status_code != 200:
+            raise RuntimeError(f"Ollama error: {response.status_code}")
 
-            if context:
-                messages.extend(context[-8:])
+        content = response.json()["message"]["content"]
+        logger.info(f"✅ Ollama response ({language})")
+        return content
 
-            messages.append({"role": "user", "content": prompt})
-
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(
-                    f"{self.url}/api/chat",
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "stream": False,
-                        "options": {
-                            "num_predict": 512,
-                            "temperature": 0.7,
-                            "num_ctx": 4096
-                        }
-                    }
-                )
-
-                if response.status_code != 200:
-                    raise Exception(f"Ollama error: {response.status_code}")
-
-                content = response.json()['message']['content']
-                logger.info(f"✅ Ollama response ({language})")
-                return content
-
-        except Exception as e:
-            logger.error(f"❌ Ollama error: {e}")
-            raise
 
 # ============================================================================
-# MAIN AI PROVIDER
+# MAIN AI ROUTER
 # ============================================================================
+
 class AIProvider:
-    """Smart AI Provider with auto-fallback"""
+    """Smart AI provider with clear fallback chain."""
 
     def __init__(self):
         self.nemotron = NemotronAI() if nvidia_api_key else None
         self.kimi = KimiAI(nvidia_api_key, kimi_model) if (use_kimi and nvidia_api_key) else None
         self.ollama = OllamaAI()
-        self.use_nvidia = use_nvidia and bool(nvidia_api_key)
-        self.use_kimi = use_kimi and bool(nvidia_api_key)
+
+        self.enable_nvidia = use_nvidia and bool(nvidia_api_key)
+        self.enable_kimi = use_kimi and bool(nvidia_api_key)
+
+    async def _generate_with_kimi(
+        self,
+        prompt: str,
+        session_id: Optional[str],
+        context: Optional[List[Dict]],
+        system_prompt: Optional[str],
+    ) -> str:
+        if not self.kimi:
+            raise RuntimeError("Kimi provider not available")
+        return await self.kimi.generate(prompt, session_id, context, system_prompt)
+
+    async def _generate_with_nemotron(
+        self,
+        prompt: str,
+        session_id: Optional[str],
+        context: Optional[List[Dict]],
+        system_prompt: Optional[str],
+    ) -> str:
+        if not self.nemotron:
+            raise RuntimeError("Nemotron provider not available")
+        return await self.nemotron.generate(prompt, session_id, context, system_prompt)
+
+    async def _generate_with_ollama(
+        self,
+        prompt: str,
+        session_id: Optional[str],
+        context: Optional[List[Dict]],
+        system_prompt: Optional[str],
+    ) -> str:
+        return await self.ollama.generate(prompt, session_id, context, system_prompt)
 
     async def generate(
         self,
         prompt: str,
-        session_id: str = None,
-        context: List[Dict] = None,
-        system_prompt: str = None,
-        use_nvidia: bool = None
+        session_id: Optional[str] = None,
+        context: Optional[List[Dict]] = None,
+        system_prompt: Optional[str] = None,
+        use_nvidia_override: Optional[bool] = None,
     ) -> str:
-        """Generate with auto-fallback"""
         start = time.time()
-        provider = use_nvidia if use_nvidia is not None else self.use_nvidia
-
-        # Deteksi bahasa untuk logging
         language = LanguageDetector.detect(prompt)
 
+        use_remote = self.enable_nvidia if use_nvidia_override is None else use_nvidia_override
+
         try:
-            if provider and self.kimi:
+            if use_remote and self.enable_kimi and self.kimi:
                 logger.info(f"🤖 Using Kimi ({language})")
-                result = await self.kimi.generate(prompt, session_id, context, system_prompt)
-                elapsed = time.time() - start
-                logger.info(f"⏱️ {elapsed:.1f}s (Kimi)")
+                result = await self._generate_with_kimi(
+                    prompt, session_id, context, system_prompt
+                )
+                logger.info(f"⏱️ {time.time() - start:.1f}s (Kimi)")
                 return result
-            
-            if provider and self.nemotron:
+
+            if use_remote and self.nemotron:
                 logger.info(f"🤖 Using Nemotron ({language})")
-                result = await self.nemotron.generate(prompt, session_id, context, system_prompt)
-                elapsed = time.time() - start
-                logger.info(f"⏱️ {elapsed:.1f}s (Nemotron)")
+                result = await self._generate_with_nemotron(
+                    prompt, session_id, context, system_prompt
+                )
+                logger.info(f"⏱️ {time.time() - start:.1f}s (Nemotron)")
                 return result
 
             logger.info(f"🔄 Using Ollama ({language})")
-            result = await self.ollama.generate(prompt, session_id, context, system_prompt)
-            elapsed = time.time() - start
-            logger.info(f"⏱️ {elapsed:.1f}s (Ollama)")
+            result = await self._generate_with_ollama(
+                prompt, session_id, context, system_prompt
+            )
+            logger.info(f"⏱️ {time.time() - start:.1f}s (Ollama)")
             return result
 
         except Exception as e:
-            logger.error(f"❌ Provider failed: {e}")
+            logger.error(f"❌ Primary provider failed: {e}")
 
-            # Fallback logic
-            if provider and self.nemotron:
+            # fallback terakhir ke Ollama
+            try:
                 logger.info("🔄 Fallback to Ollama...")
-                try:
-                    result = await self.ollama.generate(prompt, session_id, context, system_prompt)
-                    return result
-                except:
-                    pass
+                result = await self._generate_with_ollama(
+                    prompt, session_id, context, system_prompt
+                )
+                logger.info(f"⏱️ {time.time() - start:.1f}s (Ollama fallback)")
+                return result
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback Ollama failed: {fallback_error}")
 
-            # Generic error message in detected language
             error_msgs = {
                 "jawa": "Maaf Mas/Mbak, lagi error. Coba maneh ya?",
                 "sunda": "Hapunten, aya gangguan. Coba deui mang?",
-                "indonesia": "Maaf Kak, sistem sedang gangguan. Coba lagi ya?"
+                "indonesia": "Maaf Kak, sistem sedang gangguan. Coba lagi ya?",
             }
             return error_msgs.get(language, "Maaf Kak, sistem sedang gangguan. Coba lagi ya?")
 
+
 # Global instance
-ollama_ai = AIProvider()
+ai_provider = AIProvider()
+
+# Backward compatibility alias
+ollama_ai = ai_provider

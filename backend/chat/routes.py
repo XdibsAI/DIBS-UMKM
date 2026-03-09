@@ -126,6 +126,8 @@ async def get_session(
         raise HTTPException(500, str(e))
 
 from fastapi import Query
+from inventory_ai.router import detect_inventory_intent
+from inventory_ai.query import search_inventory_products, get_low_stock_products_local, build_stock_response, build_price_response, build_low_stock_response
 
 @router.post("/sessions/{session_id}/messages")
 async def send_message(
@@ -212,23 +214,77 @@ async def send_message(
         # === END REMINDER ===
 
         
+        # === LOCAL INVENTORY INTENT ===
+        inventory_intent = detect_inventory_intent(request.message)
+
+        if inventory_intent.matched:
+            user_id = str(getattr(current_user, "user_id", getattr(current_user, "id", "")))
+
+            if inventory_intent.intent == "low_stock":
+                low_stock_items = await get_low_stock_products_local(db, user_id, threshold=5, limit=10)
+                ai_response = build_low_stock_response(low_stock_items)
+            else:
+                products = await search_inventory_products(
+                    db=db,
+                    user_id=user_id,
+                    product_query=inventory_intent.product_query,
+                    size_value=inventory_intent.size_value,
+                    size_unit=inventory_intent.size_unit,
+                    limit=8,
+                )
+
+                if inventory_intent.intent == "check_price":
+                    ai_response = build_price_response(
+                        inventory_intent.product_query or request.message,
+                        products,
+                    )
+                else:
+                    ai_response = build_stock_response(
+                        inventory_intent.product_query or request.message,
+                        products,
+                    )
+
+            assistant_msg_id = str(uuid.uuid4())
+            assistant_created_at = datetime.now(timezone.utc).isoformat()
+
+            await db.execute(
+                "INSERT INTO chat_messages (id, session_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
+                (assistant_msg_id, session_id, "assistant", ai_response, assistant_created_at)
+            )
+
+            return {
+                "status": "success",
+                "data": {
+                    "assistant_message": {
+                        "role": "assistant",
+                        "content": ai_response,
+                        "created_at": assistant_created_at
+                    }
+                }
+            }
+
         # Detect language and enhance prompt
         detected_lang = detect_language(request.message)
         enhanced_message = enhance_prompt_with_language(request.message, detected_lang)
-        
+
         # Generate AI response
-        ai_response = await ollama_ai.generate(enhanced_message, context=context, use_nvidia=use_nvidia)
-        
+        ai_response = await ollama_ai.generate(
+            enhanced_message,
+            session_id=session_id,
+            context=context,
+            use_nvidia_override=use_nvidia
+        )
+
         # Improve table formatting for mobile
         ai_response = improve_table_formatting(ai_response)
-        
+
         # Save assistant message
         assistant_msg_id = str(uuid.uuid4())
         await db.execute(
             "INSERT INTO chat_messages (id, session_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)",
             (assistant_msg_id, session_id, "assistant", ai_response, datetime.now(timezone.utc).isoformat())
         )
-        
+
         logger.info(f"✅ Message processed in session {session_id}")
         return {
             "status": "success",
