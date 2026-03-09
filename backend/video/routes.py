@@ -1,173 +1,289 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
-from config.settings import ENABLE_VIDEO_GENERATION, VIDEO_SERVER_URL
-from pydantic import BaseModel, validator
-from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from pathlib import Path
 import logging
 
-from video_agent import initialize_video_agent
-from utils.errors import with_error_handling, ValidationError
-from config.settings import settings
-from database.transaction import tx_manager
+from auth.utils import get_current_user, TokenData
+from config.settings import ENABLE_VIDEO_GENERATION, PUBLIC_URL
+from video.pipeline import VideoPipeline, VideoStatus
 
+logger = logging.getLogger("DIBS1")
 
-logger = logging.getLogger('DIBS1')
+router = APIRouter(prefix="/api/v1/video", tags=["Video"])
 
-# Database & video_agent will be injected
 db = None
 video_agent = None
+
 
 def set_database(database):
     global db
     db = database
 
+
 def set_video_agent(agent):
     global video_agent
-router = APIRouter(prefix="/api/v1/video", tags=["Video"])
+    video_agent = agent
 
-# Simple transaction manager placeholder
-tx_manager = None  # TODO: Implement proper transaction manager
-logger = logging.getLogger(__name__)
 
-class ScriptData(BaseModel):
-    """Validated script data model"""
-    script: str
+class VideoCreateRequest(BaseModel):
+    niche: str = Field(..., min_length=3)
+    duration: int = Field(default=30, ge=5, le=180)
+    style: str = "engaging"
     language: str = "id"
-    text_effects: dict = {}
-    
-    @validator('script')
-    def script_not_empty(cls, v):
-        if not v or len(v.strip()) < 10:
-            raise ValueError('Script minimal 10 karakter')
-        return v.strip()
-    
-    @validator('language')
-    def validate_language(cls, v):
-        supported = ['id', 'en', 'ja', 'ko', 'zh']
-        if v not in supported:
-            raise ValueError(f'Language must be one of: {supported}')
-        return v
 
-class VideoResponse(BaseModel):
-    """Standardized video response"""
-    success: bool
-    project_id: Optional[str] = None
-    status: Optional[str] = None
-    video_url: Optional[str] = None
-    message: Optional[str] = None
-    error: Optional[str] = None
 
-# Mock user dependency (ganti karo auth asli)
-async def get_current_user():
-    return {"id": "user123", "name": "Test User"}
+async def ensure_video_projects_table():
+    if db is None:
+        raise RuntimeError("Database belum diinisialisasi")
 
-@router.post("/generate", response_model=VideoResponse)
-@with_error_handling
-async def generate_video(
-    script_data: ScriptData,
-    background_tasks: BackgroundTasks,
-    current_user = Depends(get_current_user)
+    await db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS video_projects (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            niche TEXT NOT NULL,
+            duration INTEGER NOT NULL DEFAULT 30,
+            style TEXT NOT NULL DEFAULT 'engaging',
+            language TEXT NOT NULL DEFAULT 'id',
+            status TEXT NOT NULL DEFAULT 'pending',
+            video_path TEXT,
+            error_message TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+
+
+def _user_id(current_user: TokenData) -> str:
+    return str(getattr(current_user, "user_id", getattr(current_user, "id", "")))
+
+
+def _resolve_video_file(video_path: str) -> Optional[Path]:
+    if not video_path:
+        return None
+
+    raw = Path(video_path)
+    candidates = [
+        raw,
+        Path("/home/dibs/dibs1/videos") / raw.name,
+        Path("/home/dibs/dibs1/backend/videos") / raw.name,
+    ]
+
+    for p in candidates:
+        if p.exists() and p.is_file():
+            return p
+
+    return None
+
+
+def _serialize_project(project: Dict[str, Any]) -> Dict[str, Any]:
+    project_id = str(project.get("id", ""))
+    status = project.get("status", VideoStatus.PENDING.value)
+    download_url = None
+    video_url = None
+
+    if status == VideoStatus.COMPLETED.value and project.get("video_path"):
+        download_url = f"{PUBLIC_URL}/api/v1/video/download/{project_id}"
+        video_url = download_url
+
+    return {
+        "id": project_id,
+        "project_id": project_id,
+        "niche": project.get("niche"),
+        "duration": project.get("duration"),
+        "style": project.get("style"),
+        "language": project.get("language"),
+        "status": status,
+        "video_path": project.get("video_path"),
+        "video_url": video_url,
+        "download_url": download_url,
+        "error_message": project.get("error_message"),
+        "created_at": project.get("created_at"),
+        "updated_at": project.get("updated_at"),
+    }
+
+
+@router.post("/create")
+async def create_video_project(
+    request: VideoCreateRequest,
+    current_user: TokenData = Depends(get_current_user),
 ):
-    """
-    Generate video from script
-    - Validates input
-    - Creates project
-    - Starts background processing
-    - Returns project ID
-    """
-    logger.info(f"🎬 Video generation requested by user: {current_user['id']}")
-    
-    # Check feature flag
     if not ENABLE_VIDEO_GENERATION:
         raise HTTPException(503, "Video generation is currently disabled")
-    
-    # Import here to avoid circular imports
-    from video.generator import video_generator
-    from video.pipeline import VideoPipeline
 
-    # Create pipeline with generator
-    pipeline = VideoPipeline(tx_manager, video_generator)
+    if db is None:
+        raise HTTPException(500, "Database belum siap")
 
-    # Create project
-    project_id = await pipeline.create_project(script_data.dict())
+    await ensure_video_projects_table()
 
-    # Start background processing
-    background_tasks.add_task(
-    pipeline.process_project,
-    project_id,
-    script_data.dict()
+    user_id = _user_id(current_user)
+    pipeline = VideoPipeline(db)
+
+    project_id = await pipeline.create_project(
+        user_id=user_id,
+        niche=request.niche,
+        duration=request.duration,
+        style=request.style,
+        language=request.language,
     )
 
-    return VideoResponse(
-        success=True,
-        project_id=project_id,
-        status=VideoStatus.PENDING.value,
-        message="Video generation started"
-    )
+    project = await pipeline.get_project(project_id, user_id)
+    payload = _serialize_project(project) if project else {
+        "id": project_id,
+        "project_id": project_id,
+        "status": VideoStatus.PENDING.value,
+    }
 
-@router.get("/status/{project_id}", response_model=VideoResponse)
-@with_error_handling
+    return {
+        "status": "success",
+        "data": payload,
+    }
+
+
+@router.get("/status/{project_id}")
 async def get_video_status(
     project_id: str,
-    current_user = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
 ):
-    """Get video generation status"""
-    # Query from database with transaction
-    def _query():
-        with tx_manager.transaction() as cursor:
-            cursor.execute("""
-                SELECT status, video_path, error_message, created_at, updated_at
-                FROM video_projects WHERE id = ?
-            """, (project_id,))
-            return cursor.fetchone()
-    
-    import asyncio
-    result = await asyncio.get_event_loop().run_in_executor(None, _query)
-    
-    if not result:
-        raise HTTPException(404, "Project not found")
-    
-    status = result['status']
-    video_url = None
-    
-    if status == VideoStatus.COMPLETED.value and result['video_path']:
-        video_url = f"{VIDEO_SERVER_URL}/videos/{result['video_path']}"
-    
-    return VideoResponse(
-        success=True,
-        project_id=project_id,
-        status=status,
-        video_url=video_url,
-        error=result['error_message'] if status == VideoStatus.FAILED.value else None
+    if db is None:
+        raise HTTPException(500, "Database belum siap")
+
+    await ensure_video_projects_table()
+
+    user_id = _user_id(current_user)
+
+    project = await db.fetch_one(
+        """
+        SELECT id, user_id, niche, duration, style, language, status,
+               video_path, error_message, created_at, updated_at
+        FROM video_projects
+        WHERE id = ? AND user_id = ?
+        """,
+        (project_id, user_id),
     )
 
-@router.get("/list", response_model=List[VideoResponse])
-@with_error_handling
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    return {
+        "status": "success",
+        "data": _serialize_project(dict(project)),
+    }
+
+
+@router.get("/list")
 async def list_videos(
     limit: int = 10,
     offset: int = 0,
-    current_user = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
 ):
-    """List user's videos"""
-    def _query():
-        with tx_manager.transaction() as cursor:
-            cursor.execute("""
-                SELECT id, status, video_path, created_at
-                FROM video_projects 
-                WHERE user_id = ?
-                ORDER BY created_at DESC
-                LIMIT ? OFFSET ?
-            """, (current_user['id'], limit, offset))
-            return cursor.fetchall()
-    
-    import asyncio
-    projects = await asyncio.get_event_loop().run_in_executor(None, _query)
-    
-    return [
-        VideoResponse(
-            success=True,
-            project_id=p['id'],
-            status=p['status'],
-            video_url=f"{VIDEO_SERVER_URL}/videos/{p['video_path']}" if p['video_path'] else None
-        )
-        for p in projects
-    ]
+    if db is None:
+        raise HTTPException(500, "Database belum siap")
+
+    await ensure_video_projects_table()
+
+    user_id = _user_id(current_user)
+
+    rows = await db.fetch_all(
+        """
+        SELECT id, user_id, niche, duration, style, language, status,
+               video_path, error_message, created_at, updated_at
+        FROM video_projects
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+        """,
+        (user_id, limit, offset),
+    )
+
+    return {
+        "status": "success",
+        "data": [_serialize_project(dict(r)) for r in rows],
+    }
+
+
+@router.get("/download/{project_id}")
+async def download_video(
+    project_id: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    if db is None:
+        raise HTTPException(500, "Database belum siap")
+
+    await ensure_video_projects_table()
+
+    user_id = _user_id(current_user)
+
+    project = await db.fetch_one(
+        """
+        SELECT id, status, video_path
+        FROM video_projects
+        WHERE id = ? AND user_id = ?
+        """,
+        (project_id, user_id),
+    )
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    project = dict(project)
+
+    if project.get("status") != VideoStatus.COMPLETED.value:
+        raise HTTPException(409, "Video belum selesai dibuat")
+
+    resolved = _resolve_video_file(project.get("video_path") or "")
+    if not resolved:
+        raise HTTPException(404, "File video tidak ditemukan")
+
+    return FileResponse(
+        path=str(resolved),
+        media_type="video/mp4",
+        filename=resolved.name,
+    )
+
+
+@router.delete("/delete/{project_id}")
+async def delete_video_project(
+    project_id: str,
+    current_user: TokenData = Depends(get_current_user),
+):
+    if db is None:
+        raise HTTPException(500, "Database belum siap")
+
+    await ensure_video_projects_table()
+
+    user_id = _user_id(current_user)
+
+    project = await db.fetch_one(
+        """
+        SELECT id, video_path
+        FROM video_projects
+        WHERE id = ? AND user_id = ?
+        """,
+        (project_id, user_id),
+    )
+
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    project = dict(project)
+
+    resolved = _resolve_video_file(project.get("video_path") or "")
+    if resolved and resolved.exists():
+        try:
+            resolved.unlink()
+        except Exception as e:
+            logger.warning(f"Gagal hapus file video {resolved}: {e}")
+
+    await db.execute(
+        "DELETE FROM video_projects WHERE id = ? AND user_id = ?",
+        (project_id, user_id),
+    )
+
+    return {
+        "status": "success",
+        "message": "Video project deleted",
+    }
