@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -377,7 +378,8 @@ class ApiService {
   static Future<Map<String, dynamic>?> lookupProductByBarcode(String barcode) async {
     try {
       final url =
-          'https://world.openfoodfacts.org/api/v2/product/$barcode.json?fields=product_name,brands';
+          'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
+          '?fields=product_name,product_name_en,generic_name,generic_name_en,brands';
 
       final res = await http.get(Uri.parse(url));
 
@@ -385,11 +387,25 @@ class ApiService {
         final data = jsonDecode(res.body);
 
         if (data['status'] == 1) {
-          final product = data['product'] ?? {};
+          final product = Map<String, dynamic>.from(data['product'] ?? {});
+
+          String pick(dynamic value) => (value ?? '').toString().trim();
+
+          final name = [
+            pick(product['product_name']),
+            pick(product['product_name_en']),
+            pick(product['generic_name']),
+            pick(product['generic_name_en']),
+          ].firstWhere(
+            (v) => v.isNotEmpty,
+            orElse: () => '',
+          );
+
+          final brand = pick(product['brands']);
 
           return {
-            'name': product['product_name'],
-            'brand': product['brands'],
+            'name': name,
+            'brand': brand,
           };
         }
       }
@@ -409,6 +425,55 @@ class ApiService {
 
   static Future<Map<String, dynamic>> saveTokoPaymentSettings(Map<String, dynamic> data) async {
     return _post('/toko/payment-settings', data);
+  }
+
+  // ==================== INVENTORY AI IMPORT / EXPORT ====================
+  static Future<Map<String, dynamic>> importProductsCSV(String filePath) async {
+    try {
+      final headers = await _getHeaders();
+
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/inventory-ai/products/import'),
+      );
+
+      request.headers.addAll({
+        'Authorization': headers['Authorization'] ?? '',
+      });
+
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+
+      final response = await request.send().timeout(
+        Duration(seconds: ApiConfig.connectionTimeout * 3),
+      );
+
+      final body = await response.stream.bytesToString();
+      return jsonDecode(body);
+    } catch (e) {
+      debugPrint('Import CSV error: $e');
+      return {'status': 'error', 'message': 'Import CSV gagal: $e'};
+    }
+  }
+
+  static Future<Uint8List?> exportProductsCSV() async {
+    try {
+      final headers = await _getHeaders();
+
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/inventory-ai/products/export'),
+        headers: headers,
+      ).timeout(Duration(seconds: ApiConfig.connectionTimeout));
+
+      if (res.statusCode == 200) {
+        return res.bodyBytes;
+      }
+
+      debugPrint('Export CSV failed: ${res.statusCode} ${res.body}');
+      return null;
+    } catch (e) {
+      debugPrint('Export CSV error: $e');
+      return null;
+    }
   }
 
 

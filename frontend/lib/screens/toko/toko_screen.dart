@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../providers/toko_provider.dart';
 import '../../providers/business_brain_provider.dart';
 import '../../core/theme.dart';
+import 'import_export_screen.dart';
 
 class TokoScreen extends StatefulWidget {
   const TokoScreen({Key? key}) : super(key: key);
@@ -140,6 +141,26 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Import / Export Produk',
+            icon: Icon(Icons.import_export, color: iconColor),
+            onPressed: () async {
+              final changed = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ImportExportScreen(),
+                ),
+              );
+
+              if (changed == true && mounted) {
+                await _initializeData();
+                context.read<BusinessBrainProvider>().loadDailySummary();
+                setState(() {});
+              }
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: iconColor,
@@ -1256,10 +1277,34 @@ class _TokoScreenState extends State<TokoScreen> with SingleTickerProviderStateM
                         barcodeController.text = code;
 
                         final result = await ApiService.lookupProductByBarcode(code);
-                        if (result != null && result['name'] != null) {
-                          final productName = result['name'].toString().trim();
+                        if (result != null) {
+                          final productName = (result['name'] ?? '').toString().trim();
+                          final brandName = (result['brand'] ?? '').toString().trim();
+
                           if (productName.isNotEmpty) {
-                            nameController.text = productName;
+                            nameController.text = brandName.isNotEmpty
+                                ? '$brandName $productName'
+                                : productName;
+                          } else if (brandName.isNotEmpty) {
+                            nameController.text = brandName;
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Produk barcode tidak ditemukan, isi nama manual'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Produk barcode tidak ditemukan, isi nama manual'),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
                           }
                         }
                       }
