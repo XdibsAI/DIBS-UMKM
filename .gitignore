@@ -100,3 +100,7 @@ __pycache__/
 backend/__pycache__/
 frontend/build/
 downloads/*.apk
+
+# temp
+frontend/tmp_disabled/
+sample_products.csv
