@@ -30,6 +30,10 @@ def set_video_agent(agent):
 class VideoCreateRequest(BaseModel):
     prompt: Optional[str] = None
     niche: Optional[str] = None
+    product_name: Optional[str] = None
+    price_text: Optional[str] = None
+    cta_text: Optional[str] = None
+    brand_name: Optional[str] = None
     duration: int = Field(default=30, ge=5, le=180)
     style: str = "engaging"
     language: str = "id"
@@ -134,6 +138,10 @@ async def create_video_project(
         user_id=user_id,
         prompt=effective_prompt,
         niche=request.niche or effective_prompt,
+        product_name=request.product_name,
+        price_text=request.price_text,
+        cta_text=request.cta_text,
+        brand_name=request.brand_name,
         duration=request.duration,
         style=request.style,
         language=request.language,

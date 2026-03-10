@@ -51,11 +51,14 @@ class VideoPipeline:
         user_id: str,
         prompt: str,
         niche: str,
+        product_name: Optional[str] = None,
+        price_text: Optional[str] = None,
+        cta_text: Optional[str] = None,
+        brand_name: Optional[str] = None,
         duration: int = 30,
         style: str = "engaging",
         language: str = "id"
     ) -> str:
-        """Create new video project"""
         await self._ensure_columns()
 
         project_id = str(uuid.uuid4())
@@ -64,6 +67,10 @@ class VideoPipeline:
             duration=duration,
             style=style,
             language=language,
+            product_name=product_name,
+            price_text=price_text,
+            cta_text=cta_text,
+            brand_name=brand_name,
         )
 
         final_type = plan.get("type", "general")
@@ -95,6 +102,10 @@ class VideoPipeline:
                 project_id=project_id,
                 prompt=prompt,
                 niche=niche,
+                product_name=product_name,
+                price_text=price_text,
+                cta_text=cta_text,
+                brand_name=brand_name,
                 duration=final_duration,
                 style=style,
                 language=language,
@@ -108,11 +119,14 @@ class VideoPipeline:
         project_id: str,
         prompt: str,
         niche: str,
+        product_name: Optional[str],
+        price_text: Optional[str],
+        cta_text: Optional[str],
+        brand_name: Optional[str],
         duration: int,
         style: str,
         language: str,
     ):
-        """Process video project with full pipeline"""
         try:
             await self._update_status(project_id, VideoStatus.PLANNING)
 
@@ -121,6 +135,10 @@ class VideoPipeline:
                 duration=duration,
                 style=style,
                 language=language,
+                product_name=product_name,
+                price_text=price_text,
+                cta_text=cta_text,
+                brand_name=brand_name,
             )
 
             await self.db.execute(
@@ -139,10 +157,13 @@ class VideoPipeline:
 
             await self._update_status(project_id, VideoStatus.PROCESSING)
 
-            # Step 1: Generate script
             await self._update_status(project_id, VideoStatus.SCRIPT_GENERATING)
+            script_seed = plan.get("subject") or niche
+            if product_name:
+                script_seed = f"{product_name} {plan.get('price_text') or ''}".strip()
+
             script_data = await story_generator.generate_script(
-                niche=plan.get("subject") or niche,
+                niche=script_seed,
                 style=style,
                 duration=duration
             )
@@ -151,14 +172,12 @@ class VideoPipeline:
             if not script:
                 raise Exception("Script generation failed")
 
-            # Step 2: Generate audio
             await self._update_status(project_id, VideoStatus.AUDIO_GENERATING)
             audio_path = await self._generate_audio(script, language)
 
             if not audio_path:
                 raise Exception("Audio generation failed")
 
-            # Step 3: Generate video
             await self._update_status(project_id, VideoStatus.VIDEO_RENDERING)
             output_filename = f"video_{project_id[:8]}.mp4"
 
@@ -187,7 +206,6 @@ class VideoPipeline:
             logger.error(f"❌ Project {project_id} failed: {e}")
 
     async def _generate_audio(self, script: str, language: str) -> Optional[str]:
-        """Generate audio with retry"""
         for attempt in range(3):
             try:
                 audio_path = await tts_handler.generate(script, language)
@@ -199,7 +217,6 @@ class VideoPipeline:
         return None
 
     async def _update_status(self, project_id: str, status: VideoStatus, **kwargs):
-        """Update project status in database"""
         updates = ['status = ?', 'updated_at = ?']
         params = [status.value, datetime.now().isoformat()]
 

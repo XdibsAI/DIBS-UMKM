@@ -1,7 +1,7 @@
 """
-Video Editor Core - Promo Engine V2
+Video Editor Core - Promo Engine V3
 Portrait 1080x1920
-Scene-based layout engine
+Scene-based layout engine with offer badge and CTA block
 """
 import os
 import logging
@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 
 
 class VideoEditor:
-    """Core video editing functionality for promo videos"""
-
     def __init__(self, output_dir: str = "videos"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -30,21 +28,16 @@ class VideoEditor:
         if planned_scenes:
             mapped = []
             for scene in planned_scenes[:5]:
-                kind = str(scene.get("kind", "body")).strip() or "body"
-                title = str(scene.get("title", "")).strip()
-                text = str(scene.get("text", "")).strip()
-
-                if not title and not text:
-                    continue
-
                 mapped.append({
-                    "type": kind,
-                    "title": title[:80],
-                    "body": text[:180],
+                    "type": str(scene.get("kind", "body")).strip() or "body",
+                    "title": str(scene.get("title", "")).strip()[:80],
+                    "body": str(scene.get("text", "")).strip()[:180],
+                    "brand": str(scene.get("brand", "")).strip()[:40],
+                    "price_text": str(scene.get("price_text", "")).strip()[:50],
+                    "cta_text": str(scene.get("cta_text", "")).strip()[:70],
+                    "product_name": str(scene.get("product_name", "")).strip()[:70],
                 })
-
-            if mapped:
-                return mapped
+            return mapped
 
         lines = self._clean_lines(script)
         if not lines:
@@ -56,49 +49,23 @@ class VideoEditor:
         first = lines[0]
         rest = lines[1:]
         scenes = [{"type": "hook", "title": first[:80], "body": ""}]
-
         for line in rest[:3]:
             scenes.append({"type": "body", "title": "", "body": line[:180]})
-
         scenes.append({"type": "cta", "title": "Coba Sekarang", "body": "Rasakan bedanya hari ini"})
         return scenes[:5]
 
     def _theme_for_scene(self, scene_type: str):
         if scene_type == "hook":
-            return {
-                "bg": (8, 10, 32),
-                "accent": "#00F5FF",
-                "panel": (18, 24, 58),
-            }
+            return {"bg": (8, 10, 32), "accent": "#00F5FF", "panel": (18, 24, 58)}
         if scene_type == "product":
-            return {
-                "bg": (14, 10, 28),
-                "accent": "#FFD54F",
-                "panel": (28, 18, 52),
-            }
+            return {"bg": (14, 10, 28), "accent": "#FFD54F", "panel": (28, 18, 52)}
         if scene_type == "benefit":
-            return {
-                "bg": (10, 20, 16),
-                "accent": "#7CFFB2",
-                "panel": (18, 40, 30),
-            }
+            return {"bg": (10, 20, 16), "accent": "#7CFFB2", "panel": (18, 40, 30)}
         if scene_type == "offer":
-            return {
-                "bg": (22, 10, 10),
-                "accent": "#FFB84D",
-                "panel": (48, 20, 20),
-            }
+            return {"bg": (22, 10, 10), "accent": "#FFB84D", "panel": (48, 20, 20)}
         if scene_type == "cta":
-            return {
-                "bg": (6, 18, 18),
-                "accent": "#00FFCC",
-                "panel": (12, 42, 42),
-            }
-        return {
-            "bg": (12, 12, 18),
-            "accent": "#D1D5DB",
-            "panel": (28, 28, 36),
-        }
+            return {"bg": (6, 18, 18), "accent": "#00FFCC", "panel": (12, 42, 42)}
+        return {"bg": (12, 12, 18), "accent": "#D1D5DB", "panel": (28, 28, 36)}
 
     def _make_text_clip(self, TextClip, text, fontsize, color, size, duration, pos_y):
         clip = TextClip(
@@ -113,15 +80,7 @@ class VideoEditor:
         clip = clip.fadein(0.3).fadeout(0.3)
         return clip
 
-    def _make_scene_clip(self, scene: Dict[str, str], duration: float):
-        from moviepy.editor import TextClip, CompositeVideoClip, ColorClip
-
-        scene_type = scene.get("type", "body")
-        title = (scene.get("title") or "").strip()
-        body = (scene.get("body") or "").strip()
-
-        theme = self._theme_for_scene(scene_type)
-
+    def _base_layers(self, ColorClip, duration, theme):
         bg_clip = ColorClip(size=(1080, 1920), color=theme["bg"], duration=duration)
 
         top_bar = ColorClip(size=(900, 120), color=theme["panel"], duration=duration)\
@@ -133,12 +92,26 @@ class VideoEditor:
         bottom_bar = ColorClip(size=(900, 110), color=theme["panel"], duration=duration)\
             .set_opacity(0.55).set_position(("center", 1670))
 
-        layers = [bg_clip, top_bar, center_panel, bottom_bar]
+        return [bg_clip, top_bar, center_panel, bottom_bar]
+
+    def _make_scene_clip(self, scene: Dict[str, str], duration: float):
+        from moviepy.editor import TextClip, CompositeVideoClip, ColorClip
+
+        scene_type = scene.get("type", "body")
+        title = (scene.get("title") or "").strip()
+        body = (scene.get("body") or "").strip()
+        brand = (scene.get("brand") or "DIBS AI").strip()
+        price_text = (scene.get("price_text") or "").strip()
+        cta_text = (scene.get("cta_text") or "").strip()
+        product_name = (scene.get("product_name") or "").strip()
+
+        theme = self._theme_for_scene(scene_type)
+        layers = self._base_layers(ColorClip, duration, theme)
 
         brand_clip = self._make_text_clip(
             TextClip,
-            "DIBS AI PROMO",
-            46,
+            f"{brand} PROMO",
+            44,
             theme["accent"],
             (860, 80),
             duration,
@@ -148,30 +121,64 @@ class VideoEditor:
 
         if scene_type == "hook":
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 84, "white", (860, 260), duration, 560))
+                layers.append(self._make_text_clip(TextClip, title, 78, "white", (820, 240), duration, 570))
             if body:
-                layers.append(self._make_text_clip(TextClip, body, 48, "#E5E7EB", (820, 200), duration, 860))
+                layers.append(self._make_text_clip(TextClip, body, 44, "#E5E7EB", (760, 180), duration, 910))
 
-        elif scene_type in ("product", "offer", "cta"):
+        elif scene_type == "product":
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 58, theme["accent"], (820, 120), duration, 560))
+                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (760, 110), duration, 610))
+            product_text = product_name or body
+            if product_text:
+                layers.append(self._make_text_clip(TextClip, product_text, 60, "white", (780, 320), duration, 820))
+
+        elif scene_type == "benefit":
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (760, 110), duration, 610))
             if body:
-                layers.append(self._make_text_clip(TextClip, body, 64, "white", (840, 420), duration, 760))
+                layers.append(self._make_text_clip(TextClip, body, 52, "white", (800, 360), duration, 810))
+
+        elif scene_type == "offer":
+            badge = ColorClip(size=(500, 110), color=(255, 184, 77), duration=duration)\
+                .set_opacity(0.9).set_position(("center", 610))
+            layers.append(badge)
+
+            layers.append(self._make_text_clip(TextClip, "PROMO SPESIAL", 40, "#111827", (460, 70), duration, 635))
+
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 54, "white", (760, 110), duration, 790))
+
+            offer_text = price_text or body or "Harga spesial hari ini"
+            layers.append(self._make_text_clip(TextClip, offer_text, 66, theme["accent"], (760, 180), duration, 980))
+
+        elif scene_type == "cta":
+            cta_box = ColorClip(size=(620, 140), color=(0, 255, 204), duration=duration)\
+                .set_opacity(0.92).set_position(("center", 930))
+            layers.append(cta_box)
+
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 52, "white", (760, 100), duration, 710))
+
+            final_cta = cta_text or body or "Order sekarang"
+            layers.append(self._make_text_clip(TextClip, final_cta, 42, "#111827", (560, 90), duration, 965))
+
+            if body and body != final_cta:
+                layers.append(self._make_text_clip(TextClip, body, 44, "white", (760, 180), duration, 1140))
 
         else:
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (820, 120), duration, 560))
+                layers.append(self._make_text_clip(TextClip, title, 52, theme["accent"], (760, 100), duration, 620))
             if body:
-                layers.append(self._make_text_clip(TextClip, body, 60, "white", (840, 420), duration, 760))
+                layers.append(self._make_text_clip(TextClip, body, 54, "white", (800, 360), duration, 820))
 
-        footer_text = "DIBS AI • UMKM Growth Engine"
+        footer_text = f"{brand} • UMKM Growth Engine"
         if scene_type == "cta":
-            footer_text = "Aksi sekarang • hasilkan penjualan"
+            footer_text = f"{brand} • Saatnya Closing"
 
         footer_clip = self._make_text_clip(
             TextClip,
             footer_text,
-            40,
+            38,
             theme["accent"],
             (860, 80),
             duration,
