@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'video_studio_screen.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/project_provider.dart';
 import '../../services/api_service.dart';
-import '../../utils/date_utils.dart';
 import '../toko/toko_screen.dart';
 
 class ProjectScreen extends StatefulWidget {
@@ -14,7 +14,8 @@ class ProjectScreen extends StatefulWidget {
   State<ProjectScreen> createState() => _ProjectScreenState();
 }
 
-class _ProjectScreenState extends State<ProjectScreen> with SingleTickerProviderStateMixin {
+class _ProjectScreenState extends State<ProjectScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -51,7 +52,7 @@ class _ProjectScreenState extends State<ProjectScreen> with SingleTickerProvider
         children: const [
           VideoProjectsTab(),
           KnowledgeTab(),
-          TokoScreen(),  // TAMBAHKAN INI
+          TokoScreen(), // TAMBAHKAN INI
         ],
       ),
     );
@@ -75,15 +76,29 @@ class VideoProjectsTab extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.video_library_outlined, size: 72, color: Colors.grey.shade300),
+            Icon(Icons.video_library_outlined,
+                size: 72, color: Colors.grey.shade300),
             const SizedBox(height: 16),
-            Text('Belum ada video project', style: TextStyle(fontSize: 18, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+            Text('Belum ada video project',
+                style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => _showCreateVideoDialog(context),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const VideoStudioScreen(),
+                ),
+              ),
               icon: const Icon(Icons.add),
               label: const Text('Buat Video Project'),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
             ),
           ],
         ),
@@ -95,7 +110,8 @@ class VideoProjectsTab extends StatelessWidget {
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: provider.videoProjects.length,
-        itemBuilder: (context, index) => VideoProjectCard(project: provider.videoProjects[index]),
+        itemBuilder: (context, index) =>
+            VideoProjectCard(project: provider.videoProjects[index]),
       ),
     );
   }
@@ -108,7 +124,11 @@ class VideoProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = project['status'] ?? 'pending';
-    final Color statusColor = status == 'completed' ? Colors.green : status == 'failed' ? Colors.red : Colors.orange;
+    final Color statusColor = status == 'completed'
+        ? Colors.green
+        : status == 'failed'
+            ? Colors.red
+            : Colors.orange;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -121,20 +141,33 @@ class VideoProjectCard extends StatelessWidget {
               children: [
                 Icon(Icons.video_library, color: Colors.blue.shade700),
                 const SizedBox(width: 8),
-                Expanded(child: Text(project['niche'] ?? 'Video Project', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold))),
+                Expanded(
+                    child: Text(project['niche'] ?? 'Video Project',
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold))),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Text(status.toUpperCase(), style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Text(status.toUpperCase(),
+                      style: TextStyle(
+                          fontSize: 10,
+                          color: statusColor,
+                          fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            Text('Duration: ${project['duration'] ?? 60}s', style: TextStyle(color: Colors.grey.shade600)),
-            Text('Style: ${project['style'] ?? 'engaging'}', style: TextStyle(color: Colors.grey.shade600)),
+            Text('Duration: ${project['duration'] ?? 60}s',
+                style: TextStyle(color: Colors.grey.shade600)),
+            Text('Style: ${project['style'] ?? 'engaging'}',
+                style: TextStyle(color: Colors.grey.shade600)),
             if (project['error'] != null) ...[
               const SizedBox(height: 8),
-              Text('Error: ${project['error']}', style: const TextStyle(color: Colors.red, fontSize: 12)),
+              Text('Error: ${project['error']}',
+                  style: const TextStyle(color: Colors.red, fontSize: 12)),
             ],
             const SizedBox(height: 12),
             Row(
@@ -230,7 +263,8 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
                   DropdownMenuItem(value: 'general', child: Text('General')),
                   DropdownMenuItem(value: 'finance', child: Text('Finance')),
                   DropdownMenuItem(value: 'schedule', child: Text('Schedule')),
-                  DropdownMenuItem(value: 'technical', child: Text('Technical')),
+                  DropdownMenuItem(
+                      value: 'technical', child: Text('Technical')),
                   DropdownMenuItem(value: 'health', child: Text('Health')),
                 ],
                 onChanged: (v) => setState(() => category = v ?? 'general'),
@@ -257,7 +291,8 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(ok ? 'Catatan ditambahkan' : 'Gagal menambah catatan'),
+                  content: Text(
+                      ok ? 'Catatan ditambahkan' : 'Gagal menambah catatan'),
                   backgroundColor: ok ? Colors.green : Colors.red,
                 ),
               );
@@ -279,7 +314,8 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.auto_stories_outlined, size: 72, color: Colors.grey.shade300),
+            Icon(Icons.auto_stories_outlined,
+                size: 72, color: Colors.grey.shade300),
             const SizedBox(height: 16),
             Text(
               'Belum ada catatan',
@@ -307,11 +343,13 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
     }
 
     return RefreshIndicator(
-      onRefresh: () => provider.loadKnowledge(search: _searchController.text.trim()),
+      onRefresh: () =>
+          provider.loadKnowledge(search: _searchController.text.trim()),
       child: ListView.builder(
         padding: const EdgeInsets.all(12),
         itemCount: provider.knowledge.length,
-        itemBuilder: (context, index) => KnowledgeCard(item: Map<String, dynamic>.from(provider.knowledge[index])),
+        itemBuilder: (context, index) => KnowledgeCard(
+            item: Map<String, dynamic>.from(provider.knowledge[index])),
       ),
     );
   }
@@ -330,7 +368,8 @@ class _KnowledgeTabState extends State<KnowledgeTab> {
                 Expanded(
                   child: TextField(
                     controller: _searchController,
-                    onSubmitted: (v) => provider.loadKnowledge(search: v.trim()),
+                    onSubmitted: (v) =>
+                        provider.loadKnowledge(search: v.trim()),
                     decoration: InputDecoration(
                       hintText: 'Cari catatan...',
                       prefixIcon: const Icon(Icons.search),
@@ -397,7 +436,8 @@ class KnowledgeCard extends StatelessWidget {
 
   Future<void> _showEditDialog(BuildContext context) async {
     final provider = Provider.of<ProjectProvider>(context, listen: false);
-    final contentController = TextEditingController(text: item['content'] ?? '');
+    final contentController =
+        TextEditingController(text: item['content'] ?? '');
     String category = (item['category'] ?? 'general').toString();
 
     await showDialog(
@@ -423,7 +463,8 @@ class KnowledgeCard extends StatelessWidget {
                   DropdownMenuItem(value: 'general', child: Text('General')),
                   DropdownMenuItem(value: 'finance', child: Text('Finance')),
                   DropdownMenuItem(value: 'schedule', child: Text('Schedule')),
-                  DropdownMenuItem(value: 'technical', child: Text('Technical')),
+                  DropdownMenuItem(
+                      value: 'technical', child: Text('Technical')),
                   DropdownMenuItem(value: 'health', child: Text('Health')),
                 ],
                 onChanged: (v) => setState(() => category = v ?? 'general'),
@@ -451,7 +492,8 @@ class KnowledgeCard extends StatelessWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(ok ? 'Catatan diupdate' : 'Gagal update catatan'),
+                  content:
+                      Text(ok ? 'Catatan diupdate' : 'Gagal update catatan'),
                   backgroundColor: ok ? Colors.green : Colors.red,
                 ),
               );
@@ -486,7 +528,8 @@ class KnowledgeCard extends StatelessWidget {
 
     if (confirm != true) return;
 
-    final ok = await provider.deleteKnowledgeItem(int.parse(item['id'].toString()));
+    final ok =
+        await provider.deleteKnowledgeItem(int.parse(item['id'].toString()));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -513,7 +556,8 @@ class KnowledgeCard extends StatelessWidget {
                 Chip(
                   label: Text(category.toString()),
                   backgroundColor: color.withOpacity(0.12),
-                  labelStyle: TextStyle(color: color, fontWeight: FontWeight.w600),
+                  labelStyle:
+                      TextStyle(color: color, fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 IconButton(
@@ -545,11 +589,11 @@ class KnowledgeCard extends StatelessWidget {
   }
 }
 
-
 void _showReportDialog(BuildContext context, ProjectProvider provider) {
   showModalBottomSheet(
     context: context,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -557,7 +601,8 @@ void _showReportDialog(BuildContext context, ProjectProvider provider) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Generate Laporan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text('Generate Laporan',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             ListTile(
               leading: const Icon(Icons.today),
@@ -590,7 +635,8 @@ void _showReportDialog(BuildContext context, ProjectProvider provider) {
   );
 }
 
-Future<void> _generateAndShowReport(BuildContext context, ProjectProvider provider, String period) async {
+Future<void> _generateAndShowReport(
+    BuildContext context, ProjectProvider provider, String period) async {
   showDialog(
     context: context,
     barrierDismissible: false,
@@ -601,7 +647,9 @@ Future<void> _generateAndShowReport(BuildContext context, ProjectProvider provid
   Navigator.pop(context);
   if (reportData == null) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(provider.error ?? 'Gagal generate laporan'), backgroundColor: Colors.red),
+      SnackBar(
+          content: Text(provider.error ?? 'Gagal generate laporan'),
+          backgroundColor: Colors.red),
     );
     return;
   }
@@ -609,12 +657,16 @@ Future<void> _generateAndShowReport(BuildContext context, ProjectProvider provid
     context: context,
     builder: (ctx) => AlertDialog(
       title: Text(reportData['title'] ?? 'Laporan'),
-      content: SingleChildScrollView(child: SelectableText(reportData['report'] ?? '', style: const TextStyle(fontSize: 14, height: 1.6))),
+      content: SingleChildScrollView(
+          child: SelectableText(reportData['report'] ?? '',
+              style: const TextStyle(fontSize: 14, height: 1.6))),
       actions: [
         TextButton(
           onPressed: () {
             Clipboard.setData(ClipboardData(text: reportData['report'] ?? ''));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Laporan disalin'), duration: Duration(seconds: 1)));
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Laporan disalin'),
+                duration: Duration(seconds: 1)));
           },
           child: const Text('Salin'),
         ),
@@ -639,14 +691,20 @@ Future<void> _downloadPDF(BuildContext context, String period) async {
   showDialog(
     context: context,
     barrierDismissible: false,
-    builder: (ctx) => const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Membuat PDF...', style: TextStyle(color: Colors.white))])),
+    builder: (ctx) => const Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+      CircularProgressIndicator(),
+      SizedBox(height: 16),
+      Text('Membuat PDF...', style: TextStyle(color: Colors.white))
+    ])),
   );
   try {
     final pdfBytes = await ApiService.downloadReportPDF(period: period);
     if (!context.mounted) return;
     Navigator.pop(context);
     if (pdfBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Gagal download PDF'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Gagal download PDF'), backgroundColor: Colors.red));
       return;
     }
     final directory = Directory('/storage/emulated/0/Download');
@@ -655,11 +713,14 @@ Future<void> _downloadPDF(BuildContext context, String period) async {
     final file = File('${directory.path}/laporan_${period}_$timestamp.pdf');
     await file.writeAsBytes(pdfBytes);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF tersimpan di:\n${file.path}'), duration: const Duration(seconds: 3)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('PDF tersimpan di:\n${file.path}'),
+        duration: const Duration(seconds: 3)));
   } catch (e) {
     if (context.mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
     }
   }
 }
@@ -700,7 +761,8 @@ Future<void> _downloadVideo(BuildContext context, String projectId) async {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal download video'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Gagal download video'), backgroundColor: Colors.red),
       );
     }
   } catch (e) {
@@ -725,13 +787,19 @@ void _showScriptDialog(BuildContext context, Map<String, dynamic> project) {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('HOOK:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+            Text('HOOK:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
             Text(script['hook'] ?? ''),
             const SizedBox(height: 12),
-            Text('BODY:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+            Text('BODY:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
             Text(script['body'] ?? ''),
             const SizedBox(height: 12),
-            Text('CTA:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
+            Text('CTA:',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.blue.shade700)),
             Text(script['cta'] ?? ''),
           ],
         ),
@@ -739,12 +807,16 @@ void _showScriptDialog(BuildContext context, Map<String, dynamic> project) {
       actions: [
         TextButton(
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: '${script['hook']}\n\n${script['body']}\n\n${script['cta']}'));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Script disalin')));
+            Clipboard.setData(ClipboardData(
+                text:
+                    '${script['hook']}\n\n${script['body']}\n\n${script['cta']}'));
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Script disalin')));
           },
           child: const Text('Salin'),
         ),
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
       ],
     ),
   );
@@ -753,7 +825,8 @@ void _showScriptDialog(BuildContext context, Map<String, dynamic> project) {
 void _shareVideoProject(BuildContext context, Map<String, dynamic> project) {
   final script = project['script'];
   if (script == null) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Script belum tersedia')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Script belum tersedia')));
     return;
   }
 
@@ -774,17 +847,22 @@ ${script['cta']}
 --- Generated by DIBS AI ---''';
 
   Clipboard.setData(ClipboardData(text: shareText));
-  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Script disalin! Paste ke WhatsApp/Email untuk share'), duration: Duration(seconds: 2)));
+  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text('Script disalin! Paste ke WhatsApp/Email untuk share'),
+      duration: Duration(seconds: 2)));
 }
 
-Future<void> _deleteVideoProject(BuildContext context, Map<String, dynamic> project) async {
+Future<void> _deleteVideoProject(
+    BuildContext context, Map<String, dynamic> project) async {
   final confirm = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
       title: const Text('Hapus Video Project'),
       content: Text('Yakin ingin menghapus project "${project['niche']}"?'),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal')),
         TextButton(
           onPressed: () => Navigator.pop(ctx, true),
           style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -809,7 +887,8 @@ Future<void> _deleteVideoProject(BuildContext context, Map<String, dynamic> proj
     Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('✅ Project dihapus'), duration: Duration(seconds: 1)),
+      const SnackBar(
+          content: Text('✅ Project dihapus'), duration: Duration(seconds: 1)),
     );
 
     Provider.of<ProjectProvider>(context, listen: false).loadAll();
@@ -835,7 +914,10 @@ void _showCreateVideoDialog(BuildContext context) {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nicheController, decoration: const InputDecoration(labelText: 'Niche/Topic', hintText: 'tips produktivitas')),
+            TextField(
+                controller: nicheController,
+                decoration: const InputDecoration(
+                    labelText: 'Niche/Topic', hintText: 'tips produktivitas')),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -856,7 +938,8 @@ void _showCreateVideoDialog(BuildContext context) {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
           ElevatedButton(
             onPressed: () async {
               if (nicheController.text.isEmpty) return;
@@ -864,20 +947,25 @@ void _showCreateVideoDialog(BuildContext context) {
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (ctx) => const Center(child: CircularProgressIndicator()),
+                builder: (ctx) =>
+                    const Center(child: CircularProgressIndicator()),
               );
               try {
-                final result = await ApiService.createVideoProject(niche: nicheController.text, duration: duration);
+                final result = await ApiService.createVideoProject(
+                    niche: nicheController.text, duration: duration);
                 if (!context.mounted) return;
                 Navigator.pop(context);
                 if (result['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Video project dibuat!')));
-                  Provider.of<ProjectProvider>(context, listen: false).loadAll();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✅ Video project dibuat!')));
+                  Provider.of<ProjectProvider>(context, listen: false)
+                      .loadAll();
                 }
               } catch (e) {
                 if (context.mounted) {
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text('Error: $e'), backgroundColor: Colors.red));
                 }
               }
             },

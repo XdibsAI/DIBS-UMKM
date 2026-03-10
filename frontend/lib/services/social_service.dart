@@ -2,13 +2,14 @@ import 'api_service.dart';
 
 class SocialService {
   // Get all posts
-  static Future<Map<String, dynamic>> getPosts({String? platform, String? status}) async {
+  static Future<Map<String, dynamic>> getPosts(
+      {String? platform, String? status}) async {
     String url = '/social/posts';
     List<String> params = [];
-    
+
     if (platform != null) params.add('platform=$platform');
     if (status != null) params.add('status=$status');
-    
+
     if (params.isNotEmpty) url += '?${params.join('&')}';
 
     return await ApiService.get(url);
@@ -59,7 +60,7 @@ class SocialService {
       'platform': platform,
       'count': count,
     });
-    
+
     final hashtags = response['data']['hashtags'] as List;
     return hashtags.map((h) => h.toString()).toList();
   }
