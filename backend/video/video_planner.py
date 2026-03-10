@@ -3,11 +3,6 @@ from typing import Dict, Any, List, Optional
 
 
 class VideoPlanner:
-    """
-    Prompt -> Video Plan
-    V4: prompt + product metadata
-    """
-
     STOP_PREFIXES = [
         "buat video",
         "buatkan video",
@@ -25,28 +20,13 @@ class VideoPlanner:
 
     def _detect_type(self, text: str) -> str:
         t = text.lower()
-
-        promo_keywords = [
-            "promo", "diskon", "jualan", "produk", "order", "beli",
-            "ramadan", "stok", "harga", "murah", "sale"
-        ]
-        edu_keywords = [
-            "tips", "cara", "tutorial", "belajar", "edukasi", "how to", "panduan"
-        ]
-        motivation_keywords = [
-            "motivasi", "semangat", "mindset", "inspirasi"
-        ]
-        story_keywords = [
-            "cerita", "kisah", "story", "perjalanan", "pengalaman"
-        ]
-
-        if any(k in t for k in promo_keywords):
+        if any(k in t for k in ["promo", "diskon", "jualan", "produk", "order", "beli", "ramadan", "stok", "harga", "sale"]):
             return "promo"
-        if any(k in t for k in edu_keywords):
+        if any(k in t for k in ["tips", "cara", "tutorial", "belajar", "edukasi", "how to", "panduan"]):
             return "education"
-        if any(k in t for k in motivation_keywords):
+        if any(k in t for k in ["motivasi", "semangat", "mindset", "inspirasi"]):
             return "motivation"
-        if any(k in t for k in story_keywords):
+        if any(k in t for k in ["cerita", "kisah", "story", "perjalanan", "pengalaman"]):
             return "story"
         return "general"
 
@@ -85,7 +65,6 @@ class VideoPlanner:
     def _title_case_subject(self, subject: str) -> str:
         if not subject:
             return "Video Baru"
-
         words = subject.split()
         small_words = {"dan", "untuk", "di", "ke", "dengan", "yang", "atau"}
         result = []
@@ -123,10 +102,7 @@ class VideoPlanner:
         for pattern in removable_patterns:
             s = re.sub(pattern, '', s).strip()
 
-        replacements = [
-            "promo", "tentang", "mengenai", "soal",
-            "yang", "untuk", "dengan", "buat", "bikin"
-        ]
+        replacements = ["promo", "tentang", "mengenai", "soal", "yang", "untuk", "dengan", "buat", "bikin"]
         tokens = [tok for tok in re.split(r'\s+', s) if tok]
         filtered = [tok for tok in tokens if tok not in replacements]
 
@@ -134,12 +110,7 @@ class VideoPlanner:
         s = re.sub(r'\s+', ' ', s).strip(" ,.-")
         return s
 
-    def _extract_subject(
-        self,
-        prompt: str,
-        video_type: str,
-        product_name: Optional[str] = None,
-    ) -> str:
+    def _extract_subject(self, prompt: str, video_type: str, product_name: Optional[str] = None) -> str:
         if product_name and product_name.strip():
             base = product_name.strip()
         else:
@@ -148,16 +119,14 @@ class VideoPlanner:
         prompt_l = prompt.lower()
 
         if not base:
-            if video_type == "promo":
-                base = "Produk Andalan"
-            elif video_type == "education":
-                base = "Tips Bisnis"
-            elif video_type == "motivation":
-                base = "Motivasi Usaha"
-            elif video_type == "story":
-                base = "Cerita Inspiratif"
-            else:
-                base = "Topik Utama"
+            defaults = {
+                "promo": "Produk Andalan",
+                "education": "Tips Bisnis",
+                "motivation": "Motivasi Usaha",
+                "story": "Cerita Inspiratif",
+                "general": "Topik Utama",
+            }
+            base = defaults.get(video_type, "Topik Utama")
 
         base = self._title_case_subject(base[:60])
 
@@ -166,7 +135,6 @@ class VideoPlanner:
                 return f"{base} Promo Ramadan"
             if "promo" not in base.lower():
                 return f"{base} Promo"
-
         return base
 
     def _default_cta(self, prompt: str, cta_text: Optional[str]) -> str:
@@ -193,6 +161,7 @@ class VideoPlanner:
         price_text: Optional[str] = None,
         cta_text: Optional[str] = None,
         brand_name: Optional[str] = None,
+        product_image_url: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         t = prompt.lower()
         is_ramadan = "ramadan" in t
@@ -222,6 +191,7 @@ class VideoPlanner:
                 "text": f"{product_display} siap menarik perhatian pelanggan",
                 "product_name": product_display,
                 "brand": brand_display,
+                "product_image_url": product_image_url or "",
             },
             {
                 "kind": "benefit",
@@ -295,6 +265,7 @@ class VideoPlanner:
         price_text: Optional[str] = None,
         cta_text: Optional[str] = None,
         brand_name: Optional[str] = None,
+        product_image_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         prompt = self._clean_text(prompt)
         final_duration = self._extract_duration(prompt, fallback=duration)
@@ -311,6 +282,7 @@ class VideoPlanner:
                 price_text=price_text,
                 cta_text=cta_text,
                 brand_name=brand_name,
+                product_image_url=product_image_url,
             )
         elif video_type == "education":
             scenes = self._education_scenes(subject, brand_name=brand_name)
@@ -333,6 +305,7 @@ class VideoPlanner:
             "price_text": price_text,
             "cta_text": cta_text,
             "brand_name": brand_name,
+            "product_image_url": product_image_url,
             "scenes": scenes,
         }
 

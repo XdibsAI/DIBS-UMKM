@@ -1,13 +1,14 @@
 """
-Video Editor Core - Promo Engine V3
+Video Editor Core - Promo Engine V4
 Portrait 1080x1920
-Scene-based layout engine with offer badge and CTA block
+Scene-based layout engine with image support + thumbnail generation
 """
 import os
 import logging
 from pathlib import Path
 from typing import Optional, Dict, List, Any
 import tempfile
+import urllib.request
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,31 @@ class VideoEditor:
     def __init__(self, output_dir: str = "videos"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+
+    def _safe_download_image(self, image_url: str) -> Optional[str]:
+        try:
+            if not image_url:
+                return None
+
+            if image_url.startswith("/") and os.path.exists(image_url):
+                return image_url
+
+            if image_url.startswith("http://") or image_url.startswith("https://"):
+                suffix = ".jpg"
+                if image_url.lower().endswith(".png"):
+                    suffix = ".png"
+                fd, temp_path = tempfile.mkstemp(suffix=suffix)
+                os.close(fd)
+                urllib.request.urlretrieve(image_url, temp_path)
+                return temp_path
+
+            if os.path.exists(image_url):
+                return image_url
+
+            return None
+        except Exception as e:
+            logger.warning(f"Image download/open failed: {e}")
+            return None
 
     def _clean_lines(self, script: str) -> List[str]:
         raw_lines = [line.strip() for line in script.split('\n')]
@@ -36,6 +62,7 @@ class VideoEditor:
                     "price_text": str(scene.get("price_text", "")).strip()[:50],
                     "cta_text": str(scene.get("cta_text", "")).strip()[:70],
                     "product_name": str(scene.get("product_name", "")).strip()[:70],
+                    "product_image_url": str(scene.get("product_image_url", "")).strip(),
                 })
             return mapped
 
@@ -94,8 +121,20 @@ class VideoEditor:
 
         return [bg_clip, top_bar, center_panel, bottom_bar]
 
+    def _append_product_image(self, layers, ImageClip, image_path: Optional[str], duration: float):
+        if not image_path:
+            return
+        try:
+            img = ImageClip(image_path).set_duration(duration)
+            img = img.resize(width=340)
+            img = img.set_position(("center", 700))
+            img = img.fadein(0.3).fadeout(0.3)
+            layers.append(img)
+        except Exception as e:
+            logger.warning(f"Product image render failed: {e}")
+
     def _make_scene_clip(self, scene: Dict[str, str], duration: float):
-        from moviepy.editor import TextClip, CompositeVideoClip, ColorClip
+        from moviepy.editor import TextClip, CompositeVideoClip, ColorClip, ImageClip
 
         scene_type = scene.get("type", "body")
         title = (scene.get("title") or "").strip()
@@ -104,6 +143,8 @@ class VideoEditor:
         price_text = (scene.get("price_text") or "").strip()
         cta_text = (scene.get("cta_text") or "").strip()
         product_name = (scene.get("product_name") or "").strip()
+        product_image_url = (scene.get("product_image_url") or "").strip()
+        local_image = self._safe_download_image(product_image_url)
 
         theme = self._theme_for_scene(scene_type)
         layers = self._base_layers(ColorClip, duration, theme)
@@ -121,16 +162,18 @@ class VideoEditor:
 
         if scene_type == "hook":
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 78, "white", (820, 240), duration, 570))
+                layers.append(self._make_text_clip(TextClip, title, 74, "white", (820, 240), duration, 560))
             if body:
-                layers.append(self._make_text_clip(TextClip, body, 44, "#E5E7EB", (760, 180), duration, 910))
+                layers.append(self._make_text_clip(TextClip, body, 42, "#E5E7EB", (760, 180), duration, 910))
 
         elif scene_type == "product":
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (760, 110), duration, 610))
+                layers.append(self._make_text_clip(TextClip, title, 52, theme["accent"], (760, 100), duration, 560))
+            self._append_product_image(layers, ImageClip, local_image, duration)
             product_text = product_name or body
             if product_text:
-                layers.append(self._make_text_clip(TextClip, product_text, 60, "white", (780, 320), duration, 820))
+                y = 1120 if local_image else 820
+                layers.append(self._make_text_clip(TextClip, product_text, 56, "white", (780, 220), duration, y))
 
         elif scene_type == "benefit":
             if title:
@@ -142,28 +185,22 @@ class VideoEditor:
             badge = ColorClip(size=(500, 110), color=(255, 184, 77), duration=duration)\
                 .set_opacity(0.9).set_position(("center", 610))
             layers.append(badge)
-
             layers.append(self._make_text_clip(TextClip, "PROMO SPESIAL", 40, "#111827", (460, 70), duration, 635))
-
             if title:
                 layers.append(self._make_text_clip(TextClip, title, 54, "white", (760, 110), duration, 790))
-
             offer_text = price_text or body or "Harga spesial hari ini"
-            layers.append(self._make_text_clip(TextClip, offer_text, 66, theme["accent"], (760, 180), duration, 980))
+            layers.append(self._make_text_clip(TextClip, offer_text, 68, theme["accent"], (760, 180), duration, 980))
 
         elif scene_type == "cta":
-            cta_box = ColorClip(size=(620, 140), color=(0, 255, 204), duration=duration)\
+            cta_box = ColorClip(size=(660, 150), color=(0, 255, 204), duration=duration)\
                 .set_opacity(0.92).set_position(("center", 930))
             layers.append(cta_box)
-
             if title:
-                layers.append(self._make_text_clip(TextClip, title, 52, "white", (760, 100), duration, 710))
-
+                layers.append(self._make_text_clip(TextClip, title, 50, "white", (760, 90), duration, 710))
             final_cta = cta_text or body or "Order sekarang"
-            layers.append(self._make_text_clip(TextClip, final_cta, 42, "#111827", (560, 90), duration, 965))
-
+            layers.append(self._make_text_clip(TextClip, final_cta, 40, "#111827", (590, 100), duration, 968))
             if body and body != final_cta:
-                layers.append(self._make_text_clip(TextClip, body, 44, "white", (760, 180), duration, 1140))
+                layers.append(self._make_text_clip(TextClip, body, 42, "white", (760, 160), duration, 1140))
 
         else:
             if title:
@@ -254,19 +291,56 @@ class VideoEditor:
             logger.error(f"Video creation error: {e}")
             raise
 
+    async def create_thumbnail_from_video(
+        self,
+        video_path: str,
+        output_filename: str,
+        second: float = 1.0,
+    ) -> Optional[str]:
+        try:
+            import subprocess
+
+            if not video_path or not os.path.exists(video_path):
+                return None
+
+            output_path = self.output_dir / output_filename
+
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-ss",
+                str(second),
+                "-i",
+                str(video_path),
+                "-frames:v",
+                "1",
+                "-q:v",
+                "2",
+                str(output_path),
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                logger.warning(f"Thumbnail generation failed: {result.stderr}")
+                return None
+
+            if not output_path.exists():
+                return None
+
+            return str(output_path)
+        except Exception as e:
+            logger.warning(f"Thumbnail generation failed: {e}")
+            return None
+
     async def generate_audio_from_text(self, text: str, language: str = "id") -> Optional[str]:
         try:
             from gtts import gTTS
-
             fd, path = tempfile.mkstemp(suffix=".mp3")
             os.close(fd)
-
             tts = gTTS(text=text, lang=language, slow=False)
             tts.save(path)
-
             logger.info(f"✅ Audio generated: {path}")
             return path
-
         except ImportError:
             logger.error("gTTS not installed")
             return None
@@ -282,24 +356,17 @@ class VideoEditor:
     ) -> Optional[str]:
         try:
             from moviepy.editor import VideoFileClip, AudioFileClip
-
             output_path = self.output_dir / output_filename
-
             video = VideoFileClip(video_path)
             audio = AudioFileClip(audio_path)
-
             if audio.duration > video.duration:
                 audio = audio.subclip(0, video.duration)
-
             final = video.set_audio(audio)
             final.write_videofile(str(output_path), codec="libx264", audio_codec="aac")
-
             video.close()
             audio.close()
             final.close()
-
             return str(output_path)
-
         except Exception as e:
             logger.error(f"Combine error: {e}")
             return None

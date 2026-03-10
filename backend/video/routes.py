@@ -34,6 +34,7 @@ class VideoCreateRequest(BaseModel):
     price_text: Optional[str] = None
     cta_text: Optional[str] = None
     brand_name: Optional[str] = None
+    product_image_url: Optional[str] = None
     duration: int = Field(default=30, ge=5, le=180)
     style: str = "engaging"
     language: str = "id"
@@ -94,6 +95,11 @@ def _serialize_project(project: Dict[str, Any]) -> Dict[str, Any]:
         download_url = f"{PUBLIC_URL}/api/v1/video/download/{project_id}"
         video_url = download_url
 
+    thumbnail_url = None
+    if project.get("thumbnail_path"):
+        thumb_name = str(project.get("thumbnail_path")).split("/")[-1]
+        thumbnail_url = f"{PUBLIC_URL}/api/v1/video/thumbnail/{thumb_name}"
+
     return {
         "id": project_id,
         "project_id": project_id,
@@ -108,6 +114,7 @@ def _serialize_project(project: Dict[str, Any]) -> Dict[str, Any]:
         "video_path": project.get("video_path"),
         "video_url": video_url,
         "download_url": download_url,
+        "thumbnail_url": thumbnail_url,
         "error_message": project.get("error_message"),
         "created_at": project.get("created_at"),
         "updated_at": project.get("updated_at"),
@@ -142,6 +149,7 @@ async def create_video_project(
         price_text=request.price_text,
         cta_text=request.cta_text,
         brand_name=request.brand_name,
+        product_image_url=request.product_image_url,
         duration=request.duration,
         style=request.style,
         language=request.language,
@@ -177,7 +185,7 @@ async def get_video_status(
     project = await db.fetch_one(
         """
         SELECT id, user_id, prompt, type, plan_json, niche, duration, style, language, status,
-               video_path, error_message, created_at, updated_at
+               video_path, thumbnail_path, error_message, created_at, updated_at
         FROM video_projects
         WHERE id = ? AND user_id = ?
         """,
@@ -209,7 +217,7 @@ async def list_videos(
     rows = await db.fetch_all(
         """
         SELECT id, user_id, prompt, type, plan_json, niche, duration, style, language, status,
-               video_path, error_message, created_at, updated_at
+               video_path, thumbnail_path, error_message, created_at, updated_at
         FROM video_projects
         WHERE user_id = ?
         ORDER BY created_at DESC
@@ -306,3 +314,12 @@ async def delete_video_project(
         "status": "success",
         "message": "Video project deleted",
     }
+
+
+@router.get("/thumbnail/{filename}")
+async def get_video_thumbnail(filename: str):
+    from fastapi.responses import FileResponse
+    thumb_path = Path("videos") / filename
+    if not thumb_path.exists():
+        raise HTTPException(404, "Thumbnail not found")
+    return FileResponse(str(thumb_path), media_type="image/jpeg")

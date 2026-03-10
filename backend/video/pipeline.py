@@ -1,5 +1,5 @@
 """
-Video Pipeline with prompt planning support
+Video Pipeline with prompt planning support + thumbnails
 """
 import asyncio
 import json
@@ -28,8 +28,6 @@ class VideoStatus(Enum):
 
 
 class VideoPipeline:
-    """Manage video generation pipeline with proper status tracking"""
-
     def __init__(self, db_manager, ollama_url: str = None):
         self.db = db_manager
         self.ollama_url = ollama_url
@@ -45,6 +43,8 @@ class VideoPipeline:
             await self.db.execute("ALTER TABLE video_projects ADD COLUMN type TEXT")
         if "plan_json" not in existing:
             await self.db.execute("ALTER TABLE video_projects ADD COLUMN plan_json TEXT")
+        if "thumbnail_path" not in existing:
+            await self.db.execute("ALTER TABLE video_projects ADD COLUMN thumbnail_path TEXT")
 
     async def create_project(
         self,
@@ -55,6 +55,7 @@ class VideoPipeline:
         price_text: Optional[str] = None,
         cta_text: Optional[str] = None,
         brand_name: Optional[str] = None,
+        product_image_url: Optional[str] = None,
         duration: int = 30,
         style: str = "engaging",
         language: str = "id"
@@ -71,6 +72,7 @@ class VideoPipeline:
             price_text=price_text,
             cta_text=cta_text,
             brand_name=brand_name,
+            product_image_url=product_image_url,
         )
 
         final_type = plan.get("type", "general")
@@ -78,8 +80,8 @@ class VideoPipeline:
 
         await self.db.execute("""
             INSERT INTO video_projects
-            (id, user_id, niche, duration, style, language, status, prompt, type, plan_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, user_id, niche, duration, style, language, status, prompt, type, plan_json, thumbnail_path, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             project_id,
             user_id,
@@ -91,6 +93,7 @@ class VideoPipeline:
             prompt,
             final_type,
             json.dumps(plan, ensure_ascii=False),
+            None,
             datetime.now().isoformat(),
             datetime.now().isoformat()
         ))
@@ -106,6 +109,7 @@ class VideoPipeline:
                 price_text=price_text,
                 cta_text=cta_text,
                 brand_name=brand_name,
+                product_image_url=product_image_url,
                 duration=final_duration,
                 style=style,
                 language=language,
@@ -123,6 +127,7 @@ class VideoPipeline:
         price_text: Optional[str],
         cta_text: Optional[str],
         brand_name: Optional[str],
+        product_image_url: Optional[str],
         duration: int,
         style: str,
         language: str,
@@ -139,6 +144,7 @@ class VideoPipeline:
                 price_text=price_text,
                 cta_text=cta_text,
                 brand_name=brand_name,
+                product_image_url=product_image_url,
             )
 
             await self.db.execute(
@@ -187,6 +193,22 @@ class VideoPipeline:
                 output_filename=output_filename,
                 duration=duration,
                 text_effects={"plan": plan},
+            )
+
+            thumbnail_filename = f"thumb_{project_id[:8]}.jpg"
+            thumbnail_path = await video_editor.create_thumbnail_from_video(
+                video_path=video_path,
+                output_filename=thumbnail_filename,
+                second=1.0,
+            )
+
+            await self.db.execute(
+                """
+                UPDATE video_projects
+                SET thumbnail_path = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (thumbnail_path, datetime.now().isoformat(), project_id)
             )
 
             await self._update_status(
@@ -238,7 +260,6 @@ class VideoPipeline:
 
     async def get_project(self, project_id: str, user_id: str) -> Optional[Dict]:
         from config.settings import PUBLIC_URL
-
         await self._ensure_columns()
 
         project = await self.db.fetch_one(
@@ -253,5 +274,9 @@ class VideoPipeline:
 
         if result.get('video_path') and result['status'] == VideoStatus.COMPLETED.value:
             result['download_url'] = f"{PUBLIC_URL}/api/v1/video/download/{project_id}"
+
+        if result.get('thumbnail_path'):
+            filename = str(result['thumbnail_path']).split('/')[-1]
+            result['thumbnail_url'] = f"{PUBLIC_URL}/api/v1/video/thumbnail/{filename}"
 
         return result
