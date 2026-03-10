@@ -40,9 +40,7 @@ class VideoService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final List<dynamic> projectList = data['data'] ?? [];
-      return projectList
-          .map((json) => VideoProject.fromJson(json))
-          .toList();
+      return projectList.map((json) => VideoProject.fromJson(json)).toList();
     } else {
       throw Exception('Failed to fetch videos');
     }

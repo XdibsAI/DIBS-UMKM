@@ -35,6 +35,8 @@ class VideoCreateRequest(BaseModel):
     cta_text: Optional[str] = None
     brand_name: Optional[str] = None
     product_image_url: Optional[str] = None
+    uploaded_image_path: Optional[str] = None
+    uploaded_image_paths: Optional[List[str]] = None
     duration: int = Field(default=30, ge=5, le=180)
     style: str = "engaging"
     language: str = "id"
@@ -150,6 +152,8 @@ async def create_video_project(
         cta_text=request.cta_text,
         brand_name=request.brand_name,
         product_image_url=request.product_image_url,
+        uploaded_image_path=request.uploaded_image_path,
+        uploaded_image_paths=request.uploaded_image_paths,
         duration=request.duration,
         style=request.style,
         language=request.language,

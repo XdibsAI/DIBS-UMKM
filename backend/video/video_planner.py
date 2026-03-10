@@ -1,313 +1,279 @@
 import re
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
+
+SCENE_KIND_MAP = {
+    "pembuka": "hook",
+    "opening": "hook",
+    "hook": "hook",
+    "akuisisi": "problem",
+    "masalah": "problem",
+    "problem": "problem",
+    "transformasi": "transformation",
+    "perubahan": "transformation",
+    "solusi": "solution",
+    "klimaks": "climax",
+    "penutup": "cta",
+    "closing": "cta",
+    "cta": "cta",
+    "call to action": "cta",
+    "review": "review",
+    "tutorial": "tutorial",
+    "edukasi": "education",
+    "motivasi": "motivation",
+}
+
+
+def _clean(text: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (text or "").strip())
+
+
+def _parse_duration(text: str, default: int = 15) -> int:
+    if not text:
+        return default
+
+    patterns = [
+        r"durasi\s*[:\-]?\s*(\d+)\s*[–-]\s*(\d+)\s*detik",
+        r"durasi\s*[:\-]?\s*(\d+)\s*[–-]\s*(\d+)\s*dtk",
+        r"durasi\s*[:\-]?\s*(\d+)\s*detik",
+        r"durasi\s*[:\-]?\s*(\d+)\s*dtk",
+    ]
+    lowered = text.lower()
+    for p in patterns:
+        m = re.search(p, lowered)
+        if m:
+            if len(m.groups()) == 2:
+                return max(10, int((int(m.group(1)) + int(m.group(2))) / 2))
+            return max(10, int(m.group(1)))
+    return default
+
+
+def _extract_field(prompt: str, label: str) -> str:
+    pattern = rf"{label}\s*[:\-]\s*(.+?)(?=\n\s*\n|\n\s*[A-ZA-ZÀ-ÿ][^:\n]{{0,40}}[:\-]|$)"
+    m = re.search(pattern, prompt, flags=re.I | re.S)
+    return _clean(m.group(1)) if m else ""
+
+
+def _guess_type(prompt: str) -> str:
+    p = prompt.lower()
+    if any(k in p for k in ["motivasi", "inspirasi", "bangkit", "semangat hidup"]):
+        return "motivasi"
+    if any(k in p for k in ["tutorial", "cara ", "langkah", "how to"]):
+        return "tutorial"
+    if any(k in p for k in ["edukasi", "penjelasan", "fakta", "belajar"]):
+        return "edukasi"
+    if any(k in p for k in ["review", "ulasan"]):
+        return "review"
+    if any(k in p for k in ["promo", "jualan", "iklan", "order", "diskon"]):
+        return "promo"
+    return "general"
+
+
+def _scene_kind_from_title(title: str, default_kind: str = "scene") -> str:
+    t = title.lower()
+    for key, value in SCENE_KIND_MAP.items():
+        if key in t:
+            return value
+    return default_kind
+
+
+def _short_caption(title: str, text: str) -> str:
+    source = _clean(title) or _clean(text)
+    if not source:
+        return ""
+    words = source.split()
+    return " ".join(words[:5]).strip()
+
+
+def _split_scene_line(scene_title: str, raw: str) -> Dict[str, str]:
+    raw = raw.strip(" –-")
+    parts = re.split(r"\s+[–-]\s+|:\s+", raw, maxsplit=1)
+    visual = ""
+    text = raw
+    if len(parts) == 2:
+        text = _clean(parts[1])
+    visual_match = re.search(r"visual\s+(.+)", raw, flags=re.I)
+    if visual_match:
+        visual = _clean(visual_match.group(1))
+    return {
+        "kind": _scene_kind_from_title(scene_title),
+        "title": _clean(scene_title),
+        "text": _clean(text),
+        "visual": visual,
+        "caption": _short_caption(scene_title, text),
+    }
+
+
+def _parse_structured_scenes(prompt: str) -> List[Dict[str, Any]]:
+    blocks = []
+    scene_block_match = re.search(
+        r"struktur\s+narasi\s*[:\-]?\s*(.+?)(?=\n\s*(visual\s*&\s*musik|visual|musik|tips produksi|tips|logo)\s*[:\-]|$)",
+        prompt,
+        flags=re.I | re.S,
+    )
+    if scene_block_match:
+        block = scene_block_match.group(1).strip()
+        pattern = r"(?:^|\n)\s*(\d+)\.\s*\*\*(.*?)\*\*\s*(?:\((.*?)\))?\s*[–-]\s*(.+?)(?=(?:\n\s*\d+\.\s*\*\*|$))"
+        matches = list(re.finditer(pattern, block, flags=re.S))
+        if matches:
+            for m in matches:
+                title = _clean(m.group(2))
+                timing = _clean(m.group(3))
+                body = _clean(m.group(4))
+                scene = _split_scene_line(title, body)
+                if timing:
+                    scene["timing"] = timing
+                blocks.append(scene)
+
+    if blocks:
+        return blocks
+
+    lines = [x.strip() for x in prompt.splitlines() if x.strip()]
+    numbered = []
+    for line in lines:
+        m = re.match(r"^\d+\.\s*(.+)$", line)
+        if m:
+            numbered.append(m.group(1).strip())
+    for line in numbered[:8]:
+        scene = _split_scene_line(line.split("–")[0].split("-")[0], line)
+        blocks.append(scene)
+
+    return blocks
+
+
+def _fallback_scenes(
+    prompt: str,
+    video_type: str,
+    subject: str,
+    cta_text: str,
+    price_text: str,
+) -> List[Dict[str, Any]]:
+    if video_type == "motivasi":
+        return [
+            {"kind": "hook", "title": "Awal Baru", "text": "Setiap pagi adalah kesempatan untuk memulai lagi.", "caption": "Awal baru"},
+            {"kind": "problem", "title": "Jatuh Itu Wajar", "text": "Kegagalan kecil bukan alasan untuk berhenti.", "caption": "Tetap jalan"},
+            {"kind": "transformation", "title": "Mulai Bergerak", "text": "Langkah kecil yang konsisten akan mengubah hidupmu.", "caption": "Mulai bangkit"},
+            {"kind": "climax", "title": "Saatnya Bersinar", "text": "Keberhasilan lahir dari proses yang terus dijalani.", "caption": "Saatnya bersinar"},
+            {"kind": "cta", "title": "Bangkit Hari Ini", "text": cta_text or "Bagikan video ini untuk menyemangati orang lain.", "caption": "Bagikan motivasi"},
+        ]
+    if video_type in {"tutorial", "edukasi"}:
+        return [
+            {"kind": "hook", "title": "Mulai dari Dasar", "text": subject, "caption": "Mulai dari dasar"},
+            {"kind": "tutorial", "title": "Langkah 1", "text": "Pahami inti masalah dan tujuan utamanya.", "caption": "Langkah 1"},
+            {"kind": "tutorial", "title": "Langkah 2", "text": "Lakukan proses inti dengan fokus dan konsisten.", "caption": "Langkah 2"},
+            {"kind": "solution", "title": "Hasil", "text": "Evaluasi hasil dan perbaiki langkah yang kurang.", "caption": "Evaluasi hasil"},
+            {"kind": "cta", "title": "Praktik Sekarang", "text": cta_text or "Simpan video ini untuk dipraktikkan nanti.", "caption": "Praktik sekarang"},
+        ]
+    return [
+        {"kind": "hook", "title": subject, "text": "Promo spesial yang layak dilihat sekarang.", "caption": "Lihat sekarang"},
+        {"kind": "product", "title": "Produk Unggulan", "text": subject, "caption": "Produk unggulan"},
+        {"kind": "benefit", "title": "Kenapa Menarik", "text": "Visual kuat, positioning jelas, dan cocok untuk konten jualan cepat.", "caption": "Kenapa menarik"},
+        {"kind": "offer", "title": "Penawaran", "text": f"Mulai dari {price_text}" if price_text else "Ada penawaran spesial untuk waktu terbatas.", "caption": "Penawaran spesial"},
+        {"kind": "cta", "title": "Aksi Sekarang", "text": cta_text or "Order sekarang sebelum kehabisan.", "caption": "Order sekarang"},
+    ]
+
+
+def build_plan(
+    prompt: str,
+    duration: int = 15,
+    style: str = "premium",
+    language: str = "id",
+    product_name: Optional[str] = None,
+    price_text: Optional[str] = None,
+    cta_text: Optional[str] = None,
+    brand_name: Optional[str] = None,
+    product_image_url: Optional[str] = None,
+) -> Dict[str, Any]:
+    prompt = (prompt or "").strip()
+    title = _extract_field(prompt, "judul") or product_name or _clean(prompt[:80]) or "Video"
+    parsed_duration = _parse_duration(prompt, duration)
+    theme = _extract_field(prompt, "tema")
+    visual_music = _extract_field(prompt, r"visual\s*&\s*musik") or _extract_field(prompt, "visual") or _extract_field(prompt, "musik")
+    tips = _extract_field(prompt, r"tips produksi") or _extract_field(prompt, "tips")
+    final_type = _guess_type(prompt)
+    brand = brand_name or "Dibs AI"
+    final_cta = cta_text or (
+        "Bagikan video ini dengan yang membutuhkan motivasi!"
+        if final_type == "motivasi"
+        else "Order sekarang"
+    )
+
+    scenes = _parse_structured_scenes(prompt)
+    if not scenes:
+        scenes = _fallback_scenes(
+            prompt=prompt,
+            video_type=final_type,
+            subject=product_name or title,
+            cta_text=final_cta,
+            price_text=price_text or "",
+        )
+
+    cleaned_scenes: List[Dict[str, Any]] = []
+    for idx, scene in enumerate(scenes[:8], start=1):
+        title_text = _clean(scene.get("title") or f"Scene {idx}")
+        body_text = _clean(scene.get("text") or "")
+        if len(body_text.split()) > 16:
+            body_text = " ".join(body_text.split()[:16]).strip()
+        cleaned_scenes.append({
+            "kind": scene.get("kind") or "scene",
+            "title": title_text,
+            "text": body_text,
+            "caption": _short_caption(scene.get("caption") or title_text, body_text),
+            "brand": brand,
+            "visual": _clean(scene.get("visual") or ""),
+            "timing": _clean(scene.get("timing") or ""),
+            "product_name": product_name or "",
+            "price_text": price_text or "",
+            "cta_text": final_cta if scene.get("kind") == "cta" else "",
+            "product_image_url": product_image_url or "",
+            "image_prompt": _clean(scene.get("visual") or body_text or title_text),
+        })
+
+    return {
+        "prompt": prompt,
+        "type": final_type,
+        "platform": "shorts",
+        "style": style,
+        "language": language,
+        "duration": parsed_duration,
+        "title": title,
+        "subject": product_name or title,
+        "theme": theme,
+        "visual_music": visual_music,
+        "tips": tips,
+        "product_name": product_name or "",
+        "price_text": price_text or "",
+        "cta_text": final_cta,
+        "brand_name": brand,
+        "product_image_url": product_image_url or "",
+        "scenes": cleaned_scenes,
+    }
 
 
 class VideoPlanner:
-    STOP_PREFIXES = [
-        "buat video",
-        "buatkan video",
-        "bikin video",
-        "tolong buat video",
-        "generate video",
-        "buat",
-        "bikin",
-    ]
-
-    def _clean_text(self, text: str) -> str:
-        text = (text or "").strip()
-        text = re.sub(r"\s+", " ", text)
-        return text
-
-    def _detect_type(self, text: str) -> str:
-        t = text.lower()
-        if any(k in t for k in ["promo", "diskon", "jualan", "produk", "order", "beli", "ramadan", "stok", "harga", "sale"]):
-            return "promo"
-        if any(k in t for k in ["tips", "cara", "tutorial", "belajar", "edukasi", "how to", "panduan"]):
-            return "education"
-        if any(k in t for k in ["motivasi", "semangat", "mindset", "inspirasi"]):
-            return "motivation"
-        if any(k in t for k in ["cerita", "kisah", "story", "perjalanan", "pengalaman"]):
-            return "story"
-        return "general"
-
-    def _detect_platform(self, text: str) -> str:
-        t = text.lower()
-        if "youtube shorts" in t or "shorts" in t:
-            return "shorts"
-        if "tiktok" in t:
-            return "tiktok"
-        if "reels" in t or "instagram" in t:
-            return "reels"
-        return "shorts"
-
-    def _detect_style(self, text: str, fallback: str = "engaging") -> str:
-        t = text.lower()
-        if "premium" in t or "mewah" in t:
-            return "premium"
-        if "cinematic" in t:
-            return "cinematic"
-        if "fun" in t or "seru" in t:
-            return "fun"
-        if "formal" in t:
-            return "formal"
-        return fallback
-
-    def _extract_duration(self, text: str, fallback: int = 15) -> int:
-        m = re.search(r'(\d{1,3})\s*(detik|seconds|sec|s)\b', text.lower())
-        if m:
-            try:
-                value = int(m.group(1))
-                return max(5, min(value, 180))
-            except Exception:
-                pass
-        return fallback
-
-    def _title_case_subject(self, subject: str) -> str:
-        if not subject:
-            return "Video Baru"
-        words = subject.split()
-        small_words = {"dan", "untuk", "di", "ke", "dengan", "yang", "atau"}
-        result = []
-        for i, word in enumerate(words):
-            if i > 0 and word.lower() in small_words:
-                result.append(word.lower())
-            else:
-                result.append(word.capitalize())
-        return " ".join(result)
-
-    def _extract_core_subject(self, prompt: str) -> str:
-        s = prompt.lower().strip()
-
-        for prefix in self.STOP_PREFIXES:
-            if s.startswith(prefix):
-                s = s[len(prefix):].strip()
-
-        removable_patterns = [
-            r'\b\d{1,3}\s*(detik|seconds|sec|s)\b',
-            r'\bgaya\s+[a-zA-Z]+\b',
-            r'\buntuk\s+ramadan\b',
-            r'\buntuk\s+tiktok\b',
-            r'\buntuk\s+reels\b',
-            r'\buntuk\s+shorts\b',
-            r'\bdengan\s+ajakan\s+order\s+sekarang\b',
-            r'\bdengan\s+cta\b',
-            r'\bdengan\s+call to action\b',
-            r'\bvideo\b',
-            r'\bpremium\b',
-            r'\bcinematic\b',
-            r'\bformal\b',
-            r'\bfun\b',
-            r'\bseru\b',
-        ]
-        for pattern in removable_patterns:
-            s = re.sub(pattern, '', s).strip()
-
-        replacements = ["promo", "tentang", "mengenai", "soal", "yang", "untuk", "dengan", "buat", "bikin"]
-        tokens = [tok for tok in re.split(r'\s+', s) if tok]
-        filtered = [tok for tok in tokens if tok not in replacements]
-
-        s = " ".join(filtered)
-        s = re.sub(r'\s+', ' ', s).strip(" ,.-")
-        return s
-
-    def _extract_subject(self, prompt: str, video_type: str, product_name: Optional[str] = None) -> str:
-        if product_name and product_name.strip():
-            base = product_name.strip()
-        else:
-            base = self._extract_core_subject(prompt)
-
-        prompt_l = prompt.lower()
-
-        if not base:
-            defaults = {
-                "promo": "Produk Andalan",
-                "education": "Tips Bisnis",
-                "motivation": "Motivasi Usaha",
-                "story": "Cerita Inspiratif",
-                "general": "Topik Utama",
-            }
-            base = defaults.get(video_type, "Topik Utama")
-
-        base = self._title_case_subject(base[:60])
-
-        if video_type == "promo":
-            if "ramadan" in prompt_l and "Ramadan" not in base:
-                return f"{base} Promo Ramadan"
-            if "promo" not in base.lower():
-                return f"{base} Promo"
-        return base
-
-    def _default_cta(self, prompt: str, cta_text: Optional[str]) -> str:
-        if cta_text and cta_text.strip():
-            return cta_text.strip()[:70]
-        if "whatsapp" in prompt.lower():
-            return "Chat WhatsApp sekarang"
-        return "Order sekarang sebelum kehabisan"
-
-    def _default_offer(self, prompt: str, price_text: Optional[str]) -> str:
-        if price_text and price_text.strip():
-            return f"Mulai dari {price_text.strip()}"
-        if "diskon" in prompt.lower():
-            return "Diskon spesial hari ini"
-        if "ramadan" in prompt.lower():
-            return "Promo terbatas selama Ramadan"
-        return "Promo terbatas, ambil sekarang"
-
-    def _promo_scenes(
-        self,
-        subject: str,
-        prompt: str,
-        product_name: Optional[str] = None,
-        price_text: Optional[str] = None,
-        cta_text: Optional[str] = None,
-        brand_name: Optional[str] = None,
-        product_image_url: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        t = prompt.lower()
-        is_ramadan = "ramadan" in t
-        is_premium = "premium" in t or "mewah" in t
-
-        hook_subtitle = "Promo spesial hari ini"
-        if is_ramadan:
-            hook_subtitle = "Promo spesial Ramadan"
-        if is_premium:
-            hook_subtitle = f"{hook_subtitle} • Edisi premium"
-
-        product_display = product_name.strip() if product_name and product_name.strip() else subject
-        offer_display = self._default_offer(prompt, price_text)
-        cta_display = self._default_cta(prompt, cta_text)
-        brand_display = brand_name.strip() if brand_name and brand_name.strip() else "DIBS AI"
-
-        return [
-            {
-                "kind": "hook",
-                "title": subject,
-                "text": hook_subtitle,
-                "brand": brand_display,
-            },
-            {
-                "kind": "product",
-                "title": "Produk Unggulan",
-                "text": f"{product_display} siap menarik perhatian pelanggan",
-                "product_name": product_display,
-                "brand": brand_display,
-                "product_image_url": product_image_url or "",
-            },
-            {
-                "kind": "benefit",
-                "title": "Kenapa Menarik?",
-                "text": "Visual kuat, positioning jelas, dan cocok untuk konten jualan cepat",
-                "brand": brand_display,
-            },
-            {
-                "kind": "offer",
-                "title": "Penawaran",
-                "text": offer_display,
-                "price_text": price_text or "",
-                "brand": brand_display,
-            },
-            {
-                "kind": "cta",
-                "title": "Aksi Sekarang",
-                "text": cta_display,
-                "cta_text": cta_display,
-                "brand": brand_display,
-            },
-        ]
-
-    def _education_scenes(self, subject: str, brand_name: Optional[str] = None) -> List[Dict[str, Any]]:
-        brand_display = brand_name.strip() if brand_name and brand_name.strip() else "DIBS AI"
-        return [
-            {"kind": "hook", "title": subject, "text": "Pelajari inti pentingnya dalam waktu singkat", "brand": brand_display},
-            {"kind": "point", "title": "Poin 1", "text": "Mulai dari hal yang paling mendasar tapi paling penting", "brand": brand_display},
-            {"kind": "point", "title": "Poin 2", "text": "Gunakan langkah yang praktis dan mudah diterapkan", "brand": brand_display},
-            {"kind": "point", "title": "Poin 3", "text": "Jangan abaikan detail yang sering dianggap sepele", "brand": brand_display},
-            {"kind": "cta", "title": "Follow Untuk Lanjutannya", "text": "Masih banyak insight yang bisa dipakai langsung", "brand": brand_display},
-        ]
-
-    def _motivation_scenes(self, subject: str, brand_name: Optional[str] = None) -> List[Dict[str, Any]]:
-        brand_display = brand_name.strip() if brand_name and brand_name.strip() else "DIBS AI"
-        return [
-            {"kind": "hook", "title": subject, "text": "Bangun langkah besar dari keputusan hari ini", "brand": brand_display},
-            {"kind": "mindset", "title": "Mindset", "text": "Kemajuan datang dari konsistensi, bukan motivasi sesaat", "brand": brand_display},
-            {"kind": "action", "title": "Aksi", "text": "Mulai kecil, bergerak terus, dan evaluasi dengan jujur", "brand": brand_display},
-            {"kind": "reinforce", "title": "Penguat", "text": "Setiap proses yang dijalani akan membentuk hasil yang kuat", "brand": brand_display},
-            {"kind": "cta", "title": "Mulai Hari Ini", "text": "Jangan tunggu sempurna untuk bergerak", "brand": brand_display},
-        ]
-
-    def _story_scenes(self, subject: str, brand_name: Optional[str] = None) -> List[Dict[str, Any]]:
-        brand_display = brand_name.strip() if brand_name and brand_name.strip() else "DIBS AI"
-        return [
-            {"kind": "hook", "title": subject, "text": "Sebuah kisah singkat yang layak didengar", "brand": brand_display},
-            {"kind": "setup", "title": "Awal Cerita", "text": "Semua dimulai dari situasi sederhana", "brand": brand_display},
-            {"kind": "conflict", "title": "Tantangan", "text": "Ada hambatan, tapi proses tetap berjalan", "brand": brand_display},
-            {"kind": "resolution", "title": "Perubahan", "text": "Dari konsistensi lahir hasil yang mulai terlihat", "brand": brand_display},
-            {"kind": "cta", "title": "Ambil Pelajarannya", "text": "Sekarang giliranmu menulis cerita sendiri", "brand": brand_display},
-        ]
-
-    def _general_scenes(self, subject: str, brand_name: Optional[str] = None) -> List[Dict[str, Any]]:
-        brand_display = brand_name.strip() if brand_name and brand_name.strip() else "DIBS AI"
-        return [
-            {"kind": "hook", "title": subject, "text": "Sampaikan inti pesannya dengan tajam", "brand": brand_display},
-            {"kind": "body", "title": "Inti Utama", "text": "Bangun pesan utama yang mudah dipahami", "brand": brand_display},
-            {"kind": "body", "title": "Penguat", "text": "Tambahkan alasan kenapa ini penting", "brand": brand_display},
-            {"kind": "body", "title": "Relevansi", "text": "Hubungkan dengan kebutuhan penonton", "brand": brand_display},
-            {"kind": "cta", "title": "Penutup", "text": "Akhiri dengan ajakan yang jelas", "brand": brand_display},
-        ]
-
     def build_plan(
         self,
         prompt: str,
         duration: int = 15,
-        style: str = "engaging",
+        style: str = "premium",
         language: str = "id",
-        product_name: Optional[str] = None,
-        price_text: Optional[str] = None,
-        cta_text: Optional[str] = None,
-        brand_name: Optional[str] = None,
-        product_image_url: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        prompt = self._clean_text(prompt)
-        final_duration = self._extract_duration(prompt, fallback=duration)
-        video_type = self._detect_type(prompt)
-        platform = self._detect_platform(prompt)
-        final_style = self._detect_style(prompt, fallback=style)
-        subject = self._extract_subject(prompt, video_type, product_name=product_name)
-
-        if video_type == "promo":
-            scenes = self._promo_scenes(
-                subject,
-                prompt,
-                product_name=product_name,
-                price_text=price_text,
-                cta_text=cta_text,
-                brand_name=brand_name,
-                product_image_url=product_image_url,
-            )
-        elif video_type == "education":
-            scenes = self._education_scenes(subject, brand_name=brand_name)
-        elif video_type == "motivation":
-            scenes = self._motivation_scenes(subject, brand_name=brand_name)
-        elif video_type == "story":
-            scenes = self._story_scenes(subject, brand_name=brand_name)
-        else:
-            scenes = self._general_scenes(subject, brand_name=brand_name)
-
-        return {
-            "prompt": prompt,
-            "type": video_type,
-            "platform": platform,
-            "style": final_style,
-            "language": language,
-            "duration": final_duration,
-            "subject": subject,
-            "product_name": product_name,
-            "price_text": price_text,
-            "cta_text": cta_text,
-            "brand_name": brand_name,
-            "product_image_url": product_image_url,
-            "scenes": scenes,
-        }
+        product_name=None,
+        price_text=None,
+        cta_text=None,
+        brand_name=None,
+        product_image_url=None,
+    ):
+        return build_plan(
+            prompt=prompt,
+            duration=duration,
+            style=style,
+            language=language,
+            product_name=product_name,
+            price_text=price_text,
+            cta_text=cta_text,
+            brand_name=brand_name,
+            product_image_url=product_image_url,
+        )
 
 
 video_planner = VideoPlanner()

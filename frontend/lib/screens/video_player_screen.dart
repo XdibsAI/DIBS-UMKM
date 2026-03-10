@@ -29,7 +29,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
 
   Future<void> _initializePlayer() async {
     _controller = VideoPlayerController.network(widget.videoUrl);
-    
+
     try {
       await _controller.initialize();
       if (mounted) {
