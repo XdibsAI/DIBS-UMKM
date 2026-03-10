@@ -1,81 +1,62 @@
-"""
-Text-to-Speech Handler - No Streamlit
-"""
 import os
 import tempfile
 import logging
 from typing import Optional
-import asyncio
 
 logger = logging.getLogger(__name__)
 
+
 class TTSHandler:
-    """Handle text-to-speech conversion with multiple providers"""
-    
-    def __init__(self):
-        self.providers = {
-            'gtts': self._gtts_generate,
-            'edge': self._edge_generate
-        }
-    
-    async def generate(self, text: str, language: str = 'id', 
-                      provider: str = 'gtts') -> Optional[str]:
-        """Generate audio from text"""
-        if provider in self.providers:
-            return await self.providers[provider](text, language)
-        return await self._gtts_generate(text, language)
-    
-    async def _gtts_generate(self, text: str, language: str) -> Optional[str]:
-        """Generate using Google TTS"""
-        try:
-            from gtts import gTTS
-            
-            fd, path = tempfile.mkstemp(suffix='.mp3')
-            os.close(fd)
-            
-            tts = gTTS(text=text, lang=language, slow=False)
-            tts.save(path)
-            
-            logger.info(f"✅ Audio generated with gTTS: {path}")
+    VOICE_MAP = {
+        "id": "id-ID-ArdiNeural",
+        "en": "en-US-GuyNeural",
+        "ja": "ja-JP-KeitaNeural",
+        "ko": "ko-KR-InJoonNeural",
+        "zh": "zh-CN-YunxiNeural",
+    }
+
+    async def generate(self, text: str, language: str = "id", voice: Optional[str] = None) -> Optional[str]:
+        path = await self._edge_generate(text, language, voice=voice)
+        if path:
             return path
-            
-        except ImportError:
-            logger.error("gTTS not installed")
-            return None
-        except Exception as e:
-            logger.error(f"gTTS error: {e}")
-            return None
-    
-    async def _edge_generate(self, text: str, language: str) -> Optional[str]:
-        """Generate using Microsoft Edge TTS"""
+        return await self._gtts_generate(text, language)
+
+    async def _edge_generate(self, text: str, language: str, voice: Optional[str] = None) -> Optional[str]:
         try:
             import edge_tts
-            
-            voice_map = {
-                'id': 'id-ID-ArdiNeural',
-                'en': 'en-US-JennyNeural',
-                'ja': 'ja-JP-NanamiNeural',
-                'ko': 'ko-KR-SunHiNeural',
-                'zh': 'zh-CN-XiaoxiaoNeural'
-            }
-            voice = voice_map.get(language, 'id-ID-ArdiNeural')
-            
-            fd, path = tempfile.mkstemp(suffix='.mp3')
+
+            fd, path = tempfile.mkstemp(suffix=".mp3")
             os.close(fd)
-            
-            communicate = edge_tts.Communicate(text, voice)
+
+            selected_voice = voice or self.VOICE_MAP.get(language, self.VOICE_MAP["id"])
+            communicate = edge_tts.Communicate(
+                text=text,
+                voice=selected_voice,
+                rate="-6%",
+                volume="+0%",
+                pitch="+0Hz",
+            )
             await communicate.save(path)
-            
-            logger.info(f"✅ Audio generated with Edge TTS: {path}")
+            logger.info(f"✅ edge-tts audio generated: {path}")
             return path
-            
-        except ImportError:
-            logger.warning("edge_tts not installed, falling back to gTTS")
-            return await self._gtts_generate(text, language)
         except Exception as e:
-            logger.error(f"Edge TTS error: {e}")
-            return await self._gtts_generate(text, language)
+            logger.warning(f"edge-tts failed: {e}")
+            return None
+
+    async def _gtts_generate(self, text: str, language: str) -> Optional[str]:
+        try:
+            from gtts import gTTS
+
+            fd, path = tempfile.mkstemp(suffix=".mp3")
+            os.close(fd)
+
+            tts = gTTS(text=text, lang=language, slow=False)
+            tts.save(path)
+            logger.info(f"✅ gTTS audio generated: {path}")
+            return path
+        except Exception as e:
+            logger.warning(f"gTTS failed: {e}")
+            return None
 
 
-# Global instance
 tts_handler = TTSHandler()

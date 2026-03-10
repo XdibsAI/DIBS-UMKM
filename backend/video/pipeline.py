@@ -11,6 +11,7 @@ import uuid
 
 from video.core import video_editor, tts_handler, story_generator
 from video.video_planner import video_planner
+from video.image_generator import scene_image_generator
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,26 @@ class VideoPipeline:
                 brand_name=brand_name,
                 product_image_url=product_image_url,
             )
+
+            # Generate image asset per scene
+            scenes = plan.get("scenes") or []
+            brand_name_for_assets = plan.get("brand_name") or "DIBS AI"
+
+            for idx, scene in enumerate(scenes, start=1):
+                try:
+                    image_path = scene_image_generator.generate_scene_image(
+                        project_id=project_id,
+                        scene_index=idx,
+                        scene_data=scene,
+                        brand_name=brand_name_for_assets,
+                    )
+                    scene["image_path"] = image_path
+                except Exception as image_error:
+                    logger.warning(
+                        f"Scene image generation failed for {project_id} scene {idx}: {image_error}"
+                    )
+
+            plan["scenes"] = scenes
 
             await self.db.execute(
                 """

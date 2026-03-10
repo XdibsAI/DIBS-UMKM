@@ -1,7 +1,6 @@
 """
-Video Editor Core - Promo Engine V4
-Portrait 1080x1920
-Scene-based layout engine with image support + thumbnail generation
+Video Editor Core - Promo Engine V8
+Full-screen product visual + Ken Burns + TikTok captions + narrator-safe layout
 """
 import os
 import logging
@@ -9,6 +8,7 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 import tempfile
 import urllib.request
+import textwrap
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +56,14 @@ class VideoEditor:
             for scene in planned_scenes[:5]:
                 mapped.append({
                     "type": str(scene.get("kind", "body")).strip() or "body",
-                    "title": str(scene.get("title", "")).strip()[:80],
-                    "body": str(scene.get("text", "")).strip()[:180],
+                    "title": str(scene.get("title", "")).strip()[:100],
+                    "body": str(scene.get("text", "")).strip()[:200],
                     "brand": str(scene.get("brand", "")).strip()[:40],
                     "price_text": str(scene.get("price_text", "")).strip()[:50],
                     "cta_text": str(scene.get("cta_text", "")).strip()[:70],
-                    "product_name": str(scene.get("product_name", "")).strip()[:70],
+                    "product_name": str(scene.get("product_name", "")).strip()[:80],
                     "product_image_url": str(scene.get("product_image_url", "")).strip(),
+                    "image_path": str(scene.get("image_path", "")).strip(),
                 })
             return mapped
 
@@ -83,55 +84,81 @@ class VideoEditor:
 
     def _theme_for_scene(self, scene_type: str):
         if scene_type == "hook":
-            return {"bg": (8, 10, 32), "accent": "#00F5FF", "panel": (18, 24, 58)}
+            return {"accent": "#00F5FF", "badge_bg": (10, 16, 36), "cta_bg": (0, 245, 255)}
         if scene_type == "product":
-            return {"bg": (14, 10, 28), "accent": "#FFD54F", "panel": (28, 18, 52)}
+            return {"accent": "#FFD54F", "badge_bg": (28, 18, 52), "cta_bg": (255, 213, 79)}
         if scene_type == "benefit":
-            return {"bg": (10, 20, 16), "accent": "#7CFFB2", "panel": (18, 40, 30)}
+            return {"accent": "#7CFFB2", "badge_bg": (18, 40, 30), "cta_bg": (124, 255, 178)}
         if scene_type == "offer":
-            return {"bg": (22, 10, 10), "accent": "#FFB84D", "panel": (48, 20, 20)}
+            return {"accent": "#FFB84D", "badge_bg": (48, 20, 20), "cta_bg": (255, 184, 77)}
         if scene_type == "cta":
-            return {"bg": (6, 18, 18), "accent": "#00FFCC", "panel": (12, 42, 42)}
-        return {"bg": (12, 12, 18), "accent": "#D1D5DB", "panel": (28, 28, 36)}
+            return {"accent": "#00FFCC", "badge_bg": (12, 42, 42), "cta_bg": (0, 255, 204)}
+        return {"accent": "#E5E7EB", "badge_bg": (28, 28, 36), "cta_bg": (229, 231, 235)}
 
-    def _make_text_clip(self, TextClip, text, fontsize, color, size, duration, pos_y):
-        clip = TextClip(
-            text,
-            fontsize=fontsize,
-            color=color,
-            method="caption",
-            size=size,
-            align="center",
-        )
-        clip = clip.set_duration(duration).set_position(("center", pos_y))
-        clip = clip.fadein(0.3).fadeout(0.3)
+    def _make_text_clip(self, TextClip, text, fontsize, color, size, duration, pos, align="center", font=None, stroke_color=None, stroke_width=0):
+        kwargs = {
+            "fontsize": fontsize,
+            "color": color,
+            "method": "caption",
+            "size": size,
+            "align": align,
+            "stroke_color": stroke_color,
+            "stroke_width": stroke_width,
+        }
+        if font:
+            kwargs["font"] = font
+
+        clip = TextClip(text, **kwargs)
+        clip = clip.set_duration(duration).set_position(pos)
+        clip = clip.fadein(0.22).fadeout(0.22)
         return clip
 
-    def _base_layers(self, ColorClip, duration, theme):
-        bg_clip = ColorClip(size=(1080, 1920), color=theme["bg"], duration=duration)
-
-        top_bar = ColorClip(size=(900, 120), color=theme["panel"], duration=duration)\
-            .set_opacity(0.65).set_position(("center", 120))
-
-        center_panel = ColorClip(size=(920, 760), color=theme["panel"], duration=duration)\
-            .set_opacity(0.28).set_position(("center", 480))
-
-        bottom_bar = ColorClip(size=(900, 110), color=theme["panel"], duration=duration)\
-            .set_opacity(0.55).set_position(("center", 1670))
-
-        return [bg_clip, top_bar, center_panel, bottom_bar]
-
-    def _append_product_image(self, layers, ImageClip, image_path: Optional[str], duration: float):
-        if not image_path:
-            return
+    def _make_bg_image(self, ImageClip, image_path: Optional[str], duration: float):
+        if not image_path or not os.path.exists(image_path):
+            return None
         try:
-            img = ImageClip(image_path).set_duration(duration)
-            img = img.resize(width=340)
-            img = img.set_position(("center", 700))
-            img = img.fadein(0.3).fadeout(0.3)
-            layers.append(img)
+            bg = ImageClip(image_path).set_duration(duration)
+            if bg.w < bg.h:
+                bg = bg.resize(height=2020)
+            else:
+                bg = bg.resize(width=1160)
+
+            # Ken Burns motion
+            base_scale = 1.00
+            end_scale = 1.08
+            bg = bg.resize(lambda t: base_scale + (end_scale - base_scale) * (t / max(duration, 0.01)))
+
+            bg = bg.set_position(lambda t: (-20 - 25 * (t / max(duration, 0.01)), -30 - 40 * (t / max(duration, 0.01))))
+            return bg
         except Exception as e:
-            logger.warning(f"Product image render failed: {e}")
+            logger.warning(f"Background image render failed: {e}")
+            return None
+
+    def _caption_chunks(self, scene: Dict[str, str]) -> List[str]:
+        scene_type = scene.get("type", "body")
+        title = (scene.get("title") or "").strip()
+        body = (scene.get("body") or "").strip()
+        product_name = (scene.get("product_name") or "").strip()
+        price_text = (scene.get("price_text") or "").strip()
+        cta_text = (scene.get("cta_text") or "").strip()
+
+        if scene_type == "hook":
+            return [title, body] if body else [title]
+        if scene_type == "product":
+            return [product_name or title, body]
+        if scene_type == "benefit":
+            return [title, body]
+        if scene_type == "offer":
+            return [title or "Promo", price_text or body]
+        if scene_type == "cta":
+            return [title or "Aksi Sekarang", cta_text or body]
+        return [title or body]
+
+    def _wrap_text(self, value: str, width: int) -> str:
+        value = (value or "").strip()
+        if not value:
+            return ""
+        return "\n".join(textwrap.wrap(value, width=width))
 
     def _make_scene_clip(self, scene: Dict[str, str], duration: float):
         from moviepy.editor import TextClip, CompositeVideoClip, ColorClip, ImageClip
@@ -144,87 +171,123 @@ class VideoEditor:
         cta_text = (scene.get("cta_text") or "").strip()
         product_name = (scene.get("product_name") or "").strip()
         product_image_url = (scene.get("product_image_url") or "").strip()
-        local_image = self._safe_download_image(product_image_url)
+        generated_image_path = (scene.get("image_path") or "").strip()
+
+        image_path = generated_image_path if generated_image_path and os.path.exists(generated_image_path) else self._safe_download_image(product_image_url)
 
         theme = self._theme_for_scene(scene_type)
-        layers = self._base_layers(ColorClip, duration, theme)
+        layers = []
 
-        brand_clip = self._make_text_clip(
-            TextClip,
-            f"{brand} PROMO",
-            44,
-            theme["accent"],
-            (860, 80),
-            duration,
-            145
+        bg_image = self._make_bg_image(ImageClip, image_path, duration)
+        if bg_image is not None:
+            layers.append(bg_image)
+        else:
+            layers.append(ColorClip(size=(1080, 1920), color=(10, 10, 18), duration=duration))
+
+        # cinematic dark overlay
+        layers.append(ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=duration).set_opacity(0.36))
+
+        # top badge
+        layers.append(
+            ColorClip(size=(860, 110), color=theme["badge_bg"], duration=duration)
+            .set_opacity(0.72)
+            .set_position(("center", 120))
         )
-        layers.append(brand_clip)
+        layers.append(self._make_text_clip(
+            TextClip, f"{brand} VISUAL", 40, "white", (780, 70), duration, ("center", 145),
+            font="DejaVu-Sans-Bold"
+        ))
+
+        # safe center panel
+        layers.append(
+            ColorClip(size=(940, 980), color=(10, 10, 15), duration=duration)
+            .set_opacity(0.22)
+            .set_position(("center", 420))
+        )
+
+        title_text = ""
+        body_text = ""
+        label_text = ""
 
         if scene_type == "hook":
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 74, "white", (820, 240), duration, 560))
-            if body:
-                layers.append(self._make_text_clip(TextClip, body, 42, "#E5E7EB", (760, 180), duration, 910))
-
+            title_text = title
+            body_text = body
         elif scene_type == "product":
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 52, theme["accent"], (760, 100), duration, 560))
-            self._append_product_image(layers, ImageClip, local_image, duration)
-            product_text = product_name or body
-            if product_text:
-                y = 1120 if local_image else 820
-                layers.append(self._make_text_clip(TextClip, product_text, 56, "white", (780, 220), duration, y))
-
+            label_text = title or "Produk Unggulan"
+            title_text = product_name or title
+            body_text = body
         elif scene_type == "benefit":
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (760, 110), duration, 610))
-            if body:
-                layers.append(self._make_text_clip(TextClip, body, 52, "white", (800, 360), duration, 810))
-
+            label_text = title
+            title_text = ""
+            body_text = body
         elif scene_type == "offer":
-            badge = ColorClip(size=(500, 110), color=(255, 184, 77), duration=duration)\
-                .set_opacity(0.9).set_position(("center", 610))
-            layers.append(badge)
-            layers.append(self._make_text_clip(TextClip, "PROMO SPESIAL", 40, "#111827", (460, 70), duration, 635))
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 54, "white", (760, 110), duration, 790))
-            offer_text = price_text or body or "Harga spesial hari ini"
-            layers.append(self._make_text_clip(TextClip, offer_text, 68, theme["accent"], (760, 180), duration, 980))
-
+            label_text = title or "Promo"
+            title_text = price_text or body
+            body_text = ""
         elif scene_type == "cta":
-            cta_box = ColorClip(size=(660, 150), color=(0, 255, 204), duration=duration)\
-                .set_opacity(0.92).set_position(("center", 930))
-            layers.append(cta_box)
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 50, "white", (760, 90), duration, 710))
-            final_cta = cta_text or body or "Order sekarang"
-            layers.append(self._make_text_clip(TextClip, final_cta, 40, "#111827", (590, 100), duration, 968))
-            if body and body != final_cta:
-                layers.append(self._make_text_clip(TextClip, body, 42, "white", (760, 160), duration, 1140))
-
+            label_text = title or "Aksi Sekarang"
+            title_text = cta_text or body
+            body_text = ""
         else:
-            if title:
-                layers.append(self._make_text_clip(TextClip, title, 52, theme["accent"], (760, 100), duration, 620))
-            if body:
-                layers.append(self._make_text_clip(TextClip, body, 54, "white", (800, 360), duration, 820))
+            title_text = title
+            body_text = body
 
-        footer_text = f"{brand} • UMKM Growth Engine"
-        if scene_type == "cta":
-            footer_text = f"{brand} • Saatnya Closing"
+        title_text = self._wrap_text(title_text, 18)
+        body_text = self._wrap_text(body_text, 34)
+        label_text = self._wrap_text(label_text, 24)
 
-        footer_clip = self._make_text_clip(
-            TextClip,
-            footer_text,
-            38,
-            theme["accent"],
-            (860, 80),
-            duration,
-            1685
+        if label_text:
+            layers.append(self._make_text_clip(
+                TextClip, label_text, 42, theme["accent"], (840, 70), duration, ("center", 610),
+                font="DejaVu-Sans-Bold"
+            ))
+
+        if title_text:
+            title_y = 760 if label_text else 690
+            layers.append(self._make_text_clip(
+                TextClip, title_text, 68, "white", (880, 260), duration, ("center", title_y),
+                font="DejaVu-Sans-Bold", stroke_color="#000000", stroke_width=2
+            ))
+
+        if body_text:
+            body_y = 1080 if title_text else 910
+            layers.append(self._make_text_clip(
+                TextClip, body_text, 36, "#F3F4F6", (840, 150), duration, ("center", body_y),
+                font="DejaVu-Sans", stroke_color="#000000", stroke_width=1
+            ))
+
+        # TikTok style captions at bottom
+        caption_chunks = [c for c in self._caption_chunks(scene) if c and c.strip()]
+        if caption_chunks:
+            caption_area = ColorClip(size=(980, 138), color=(8, 8, 10), duration=duration)\
+                .set_opacity(0.70).set_position(("center", 1490))
+            layers.append(caption_area)
+
+            chunk_duration = duration / len(caption_chunks)
+            for idx, chunk in enumerate(caption_chunks):
+                start = idx * chunk_duration
+                end = min(duration, (idx + 1) * chunk_duration)
+                txt = self._wrap_text(chunk.upper(), 26)
+                cap = self._make_text_clip(
+                    TextClip, txt, 32, "white", (920, 100), end - start, ("center", 1512),
+                    font="DejaVu-Sans-Bold", stroke_color="#000000", stroke_width=2
+                ).set_start(start)
+                layers.append(cap)
+
+        # footer
+        layers.append(
+            ColorClip(size=(860, 86), color=(12, 12, 20), duration=duration)
+            .set_opacity(0.60)
+            .set_position(("center", 1708))
         )
-        layers.append(footer_clip)
+        footer_text = brand if scene_type != "cta" else f"{brand} • ORDER NOW"
+        layers.append(self._make_text_clip(
+            TextClip, footer_text, 30, "#F3F4F6", (780, 50), duration, ("center", 1726),
+            font="DejaVu-Sans"
+        ))
 
         scene_clip = CompositeVideoClip(layers, size=(1080, 1920)).set_duration(duration)
-        scene_clip = scene_clip.fadein(0.35).fadeout(0.35)
+        scene_clip = scene_clip.fadein(0.25).fadeout(0.25)
         return scene_clip
 
     async def create_video_from_script(
