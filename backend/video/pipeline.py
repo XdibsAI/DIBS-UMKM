@@ -1,7 +1,8 @@
 """
-Video Pipeline with proper status tracking
+Video Pipeline with prompt planning support
 """
 import asyncio
+import json
 from enum import Enum
 from typing import Optional, Dict, Any
 from datetime import datetime
@@ -9,11 +10,14 @@ import logging
 import uuid
 
 from video.core import video_editor, tts_handler, story_generator
+from video.video_planner import video_planner
 
 logger = logging.getLogger(__name__)
 
+
 class VideoStatus(Enum):
     PENDING = "pending"
+    PLANNING = "planning"
     PROCESSING = "processing"
     SCRIPT_GENERATING = "script_generating"
     AUDIO_GENERATING = "audio_generating"
@@ -21,6 +25,7 @@ class VideoStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
 
 class VideoPipeline:
     """Manage video generation pipeline with proper status tracking"""
@@ -30,70 +35,149 @@ class VideoPipeline:
         self.ollama_url = ollama_url
         self.active_tasks: Dict[str, asyncio.Task] = {}
 
-    async def create_project(self, user_id: str, niche: str, duration: int = 30, 
-                           style: str = "engaging", language: str = "id") -> str:
+    async def _ensure_columns(self):
+        columns = await self.db.fetch_all("PRAGMA table_info(video_projects)")
+        existing = {dict(c)["name"] for c in columns}
+
+        if "prompt" not in existing:
+            await self.db.execute("ALTER TABLE video_projects ADD COLUMN prompt TEXT")
+        if "type" not in existing:
+            await self.db.execute("ALTER TABLE video_projects ADD COLUMN type TEXT")
+        if "plan_json" not in existing:
+            await self.db.execute("ALTER TABLE video_projects ADD COLUMN plan_json TEXT")
+
+    async def create_project(
+        self,
+        user_id: str,
+        prompt: str,
+        niche: str,
+        duration: int = 30,
+        style: str = "engaging",
+        language: str = "id"
+    ) -> str:
         """Create new video project"""
+        await self._ensure_columns()
+
         project_id = str(uuid.uuid4())
-        
+        plan = video_planner.build_plan(
+            prompt=prompt,
+            duration=duration,
+            style=style,
+            language=language,
+        )
+
+        final_type = plan.get("type", "general")
+        final_duration = int(plan.get("duration", duration) or duration)
+
         await self.db.execute("""
-            INSERT INTO video_projects 
-            (id, user_id, niche, duration, style, language, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO video_projects
+            (id, user_id, niche, duration, style, language, status, prompt, type, plan_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            project_id, user_id, niche, duration, style, language,
+            project_id,
+            user_id,
+            niche,
+            final_duration,
+            style,
+            language,
             VideoStatus.PENDING.value,
+            prompt,
+            final_type,
+            json.dumps(plan, ensure_ascii=False),
             datetime.now().isoformat(),
             datetime.now().isoformat()
         ))
-        
-        logger.info(f"✅ Project created: {project_id}")
-        
-        # Start background processing
-        asyncio.create_task(self.process_project(project_id, niche, duration, style, language))
-        
+
+        logger.info(f"✅ Video project created: {project_id}")
+
+        asyncio.create_task(
+            self.process_project(
+                project_id=project_id,
+                prompt=prompt,
+                niche=niche,
+                duration=final_duration,
+                style=style,
+                language=language,
+            )
+        )
+
         return project_id
 
-    async def process_project(self, project_id: str, niche: str, duration: int,
-                            style: str, language: str):
+    async def process_project(
+        self,
+        project_id: str,
+        prompt: str,
+        niche: str,
+        duration: int,
+        style: str,
+        language: str,
+    ):
         """Process video project with full pipeline"""
         try:
-            # Update status
+            await self._update_status(project_id, VideoStatus.PLANNING)
+
+            plan = video_planner.build_plan(
+                prompt=prompt,
+                duration=duration,
+                style=style,
+                language=language,
+            )
+
+            await self.db.execute(
+                """
+                UPDATE video_projects
+                SET type = ?, plan_json = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    plan.get("type", "general"),
+                    json.dumps(plan, ensure_ascii=False),
+                    datetime.now().isoformat(),
+                    project_id,
+                )
+            )
+
             await self._update_status(project_id, VideoStatus.PROCESSING)
-            
+
             # Step 1: Generate script
             await self._update_status(project_id, VideoStatus.SCRIPT_GENERATING)
-            script_data = await story_generator.generate_script(niche, style, duration)
-            script = script_data.get('full_script', '')
-            
+            script_data = await story_generator.generate_script(
+                niche=plan.get("subject") or niche,
+                style=style,
+                duration=duration
+            )
+            script = script_data.get("full_script", "")
+
             if not script:
                 raise Exception("Script generation failed")
-            
+
             # Step 2: Generate audio
             await self._update_status(project_id, VideoStatus.AUDIO_GENERATING)
             audio_path = await self._generate_audio(script, language)
-            
+
             if not audio_path:
                 raise Exception("Audio generation failed")
-            
+
             # Step 3: Generate video
             await self._update_status(project_id, VideoStatus.VIDEO_RENDERING)
             output_filename = f"video_{project_id[:8]}.mp4"
+
             video_path = await video_editor.create_video_from_script(
                 script=script,
                 audio_path=audio_path,
                 output_filename=output_filename,
-                duration=duration
+                duration=duration,
+                text_effects={"plan": plan},
             )
-            
-            # Step 4: Update success
+
             await self._update_status(
-                project_id, 
+                project_id,
                 VideoStatus.COMPLETED,
                 video_path=video_path
             )
-            
+
             logger.info(f"🎬 Project {project_id} completed successfully")
-            
+
         except Exception as e:
             await self._update_status(
                 project_id,
@@ -136,22 +220,21 @@ class VideoPipeline:
         """, params)
 
     async def get_project(self, project_id: str, user_id: str) -> Optional[Dict]:
-        """Get project details"""
         from config.settings import PUBLIC_URL
-        
+
+        await self._ensure_columns()
+
         project = await self.db.fetch_one(
             "SELECT * FROM video_projects WHERE id = ? AND user_id = ?",
             (project_id, user_id)
         )
-        
+
         if not project:
             return None
-            
+
         result = dict(project)
-        
-        # Add download URL if completed
+
         if result.get('video_path') and result['status'] == VideoStatus.COMPLETED.value:
-            filename = result['video_path'].split('/')[-1]
-            result['download_url'] = f"{PUBLIC_URL}:9091/videos/{filename}"
-            
+            result['download_url'] = f"{PUBLIC_URL}/api/v1/video/download/{project_id}"
+
         return result

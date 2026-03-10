@@ -28,7 +28,8 @@ def set_video_agent(agent):
 
 
 class VideoCreateRequest(BaseModel):
-    niche: str = Field(..., min_length=3)
+    prompt: Optional[str] = None
+    niche: Optional[str] = None
     duration: int = Field(default=30, ge=5, le=180)
     style: str = "engaging"
     language: str = "id"
@@ -92,6 +93,9 @@ def _serialize_project(project: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": project_id,
         "project_id": project_id,
+        "prompt": project.get("prompt"),
+        "type": project.get("type"),
+        "plan_json": project.get("plan_json"),
         "niche": project.get("niche"),
         "duration": project.get("duration"),
         "style": project.get("style"),
@@ -122,9 +126,14 @@ async def create_video_project(
     user_id = _user_id(current_user)
     pipeline = VideoPipeline(db)
 
+    effective_prompt = (request.prompt or request.niche or "").strip()
+    if len(effective_prompt) < 3:
+        raise HTTPException(400, "Prompt atau niche minimal 3 karakter")
+
     project_id = await pipeline.create_project(
         user_id=user_id,
-        niche=request.niche,
+        prompt=effective_prompt,
+        niche=request.niche or effective_prompt,
         duration=request.duration,
         style=request.style,
         language=request.language,
@@ -134,6 +143,8 @@ async def create_video_project(
     payload = _serialize_project(project) if project else {
         "id": project_id,
         "project_id": project_id,
+        "prompt": effective_prompt,
+        "type": "general",
         "status": VideoStatus.PENDING.value,
     }
 
@@ -157,7 +168,7 @@ async def get_video_status(
 
     project = await db.fetch_one(
         """
-        SELECT id, user_id, niche, duration, style, language, status,
+        SELECT id, user_id, prompt, type, plan_json, niche, duration, style, language, status,
                video_path, error_message, created_at, updated_at
         FROM video_projects
         WHERE id = ? AND user_id = ?
@@ -189,7 +200,7 @@ async def list_videos(
 
     rows = await db.fetch_all(
         """
-        SELECT id, user_id, niche, duration, style, language, status,
+        SELECT id, user_id, prompt, type, plan_json, niche, duration, style, language, status,
                video_path, error_message, created_at, updated_at
         FROM video_projects
         WHERE user_id = ?

@@ -1,10 +1,9 @@
 """
-Video Editor Core - Promo Video V1
+Video Editor Core - Promo Engine V2
 Portrait 1080x1920
-Scene-based text promo renderer
+Scene-based layout engine
 """
 import os
-import re
 import logging
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -22,66 +21,167 @@ class VideoEditor:
 
     def _clean_lines(self, script: str) -> List[str]:
         raw_lines = [line.strip() for line in script.split('\n')]
-        lines = [line for line in raw_lines if line]
-        return lines
+        return [line for line in raw_lines if line]
 
-    def _build_scenes(self, script: str) -> List[Dict[str, str]]:
+    def _build_scenes(self, script: str, plan: Dict[str, Any] = None) -> List[Dict[str, str]]:
+        plan = plan or {}
+        planned_scenes = plan.get("scenes") or []
+
+        if planned_scenes:
+            mapped = []
+            for scene in planned_scenes[:5]:
+                kind = str(scene.get("kind", "body")).strip() or "body"
+                title = str(scene.get("title", "")).strip()
+                text = str(scene.get("text", "")).strip()
+
+                if not title and not text:
+                    continue
+
+                mapped.append({
+                    "type": kind,
+                    "title": title[:80],
+                    "body": text[:180],
+                })
+
+            if mapped:
+                return mapped
+
         lines = self._clean_lines(script)
-
         if not lines:
             return [
-                {
-                    "type": "title",
-                    "title": "Promo Hari Ini",
-                    "body": "Yuk cek produk terbaik hari ini",
-                },
-                {
-                    "type": "cta",
-                    "title": "Order Sekarang",
-                    "body": "Jangan sampai kehabisan",
-                },
+                {"type": "hook", "title": "Promo Hari Ini", "body": "Yuk cek produk terbaik hari ini"},
+                {"type": "cta", "title": "Order Sekarang", "body": "Jangan sampai kehabisan"},
             ]
 
         first = lines[0]
         rest = lines[1:]
+        scenes = [{"type": "hook", "title": first[:80], "body": ""}]
 
-        scenes: List[Dict[str, str]] = []
+        for line in rest[:3]:
+            scenes.append({"type": "body", "title": "", "body": line[:180]})
 
-        # Scene 1: hook
-        scenes.append({
-            "type": "hook",
-            "title": first[:80],
-            "body": "",
-        })
-
-        # Scene 2-4: isi utama
-        grouped = []
-        current = []
-        for line in rest[:6]:
-            current.append(line)
-            if len(current) == 2:
-                grouped.append(current)
-                current = []
-        if current:
-            grouped.append(current)
-
-        for group in grouped[:3]:
-            body = " ".join(group).strip()
-            if body:
-                scenes.append({
-                    "type": "body",
-                    "title": "",
-                    "body": body[:180],
-                })
-
-        # Scene akhir CTA
-        scenes.append({
-            "type": "cta",
-            "title": "Coba Sekarang",
-            "body": "Rasakan bedanya hari ini",
-        })
-
+        scenes.append({"type": "cta", "title": "Coba Sekarang", "body": "Rasakan bedanya hari ini"})
         return scenes[:5]
+
+    def _theme_for_scene(self, scene_type: str):
+        if scene_type == "hook":
+            return {
+                "bg": (8, 10, 32),
+                "accent": "#00F5FF",
+                "panel": (18, 24, 58),
+            }
+        if scene_type == "product":
+            return {
+                "bg": (14, 10, 28),
+                "accent": "#FFD54F",
+                "panel": (28, 18, 52),
+            }
+        if scene_type == "benefit":
+            return {
+                "bg": (10, 20, 16),
+                "accent": "#7CFFB2",
+                "panel": (18, 40, 30),
+            }
+        if scene_type == "offer":
+            return {
+                "bg": (22, 10, 10),
+                "accent": "#FFB84D",
+                "panel": (48, 20, 20),
+            }
+        if scene_type == "cta":
+            return {
+                "bg": (6, 18, 18),
+                "accent": "#00FFCC",
+                "panel": (12, 42, 42),
+            }
+        return {
+            "bg": (12, 12, 18),
+            "accent": "#D1D5DB",
+            "panel": (28, 28, 36),
+        }
+
+    def _make_text_clip(self, TextClip, text, fontsize, color, size, duration, pos_y):
+        clip = TextClip(
+            text,
+            fontsize=fontsize,
+            color=color,
+            method="caption",
+            size=size,
+            align="center",
+        )
+        clip = clip.set_duration(duration).set_position(("center", pos_y))
+        clip = clip.fadein(0.3).fadeout(0.3)
+        return clip
+
+    def _make_scene_clip(self, scene: Dict[str, str], duration: float):
+        from moviepy.editor import TextClip, CompositeVideoClip, ColorClip
+
+        scene_type = scene.get("type", "body")
+        title = (scene.get("title") or "").strip()
+        body = (scene.get("body") or "").strip()
+
+        theme = self._theme_for_scene(scene_type)
+
+        bg_clip = ColorClip(size=(1080, 1920), color=theme["bg"], duration=duration)
+
+        top_bar = ColorClip(size=(900, 120), color=theme["panel"], duration=duration)\
+            .set_opacity(0.65).set_position(("center", 120))
+
+        center_panel = ColorClip(size=(920, 760), color=theme["panel"], duration=duration)\
+            .set_opacity(0.28).set_position(("center", 480))
+
+        bottom_bar = ColorClip(size=(900, 110), color=theme["panel"], duration=duration)\
+            .set_opacity(0.55).set_position(("center", 1670))
+
+        layers = [bg_clip, top_bar, center_panel, bottom_bar]
+
+        brand_clip = self._make_text_clip(
+            TextClip,
+            "DIBS AI PROMO",
+            46,
+            theme["accent"],
+            (860, 80),
+            duration,
+            145
+        )
+        layers.append(brand_clip)
+
+        if scene_type == "hook":
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 84, "white", (860, 260), duration, 560))
+            if body:
+                layers.append(self._make_text_clip(TextClip, body, 48, "#E5E7EB", (820, 200), duration, 860))
+
+        elif scene_type in ("product", "offer", "cta"):
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 58, theme["accent"], (820, 120), duration, 560))
+            if body:
+                layers.append(self._make_text_clip(TextClip, body, 64, "white", (840, 420), duration, 760))
+
+        else:
+            if title:
+                layers.append(self._make_text_clip(TextClip, title, 54, theme["accent"], (820, 120), duration, 560))
+            if body:
+                layers.append(self._make_text_clip(TextClip, body, 60, "white", (840, 420), duration, 760))
+
+        footer_text = "DIBS AI • UMKM Growth Engine"
+        if scene_type == "cta":
+            footer_text = "Aksi sekarang • hasilkan penjualan"
+
+        footer_clip = self._make_text_clip(
+            TextClip,
+            footer_text,
+            40,
+            theme["accent"],
+            (860, 80),
+            duration,
+            1685
+        )
+        layers.append(footer_clip)
+
+        scene_clip = CompositeVideoClip(layers, size=(1080, 1920)).set_duration(duration)
+        scene_clip = scene_clip.fadein(0.35).fadeout(0.35)
+        return scene_clip
 
     async def create_video_from_script(
         self,
@@ -91,105 +191,17 @@ class VideoEditor:
         duration: int = 30,
         text_effects: Dict[str, Any] = None
     ) -> str:
-        """
-        Create promo video from script with multiple portrait scenes.
-        """
         try:
-            from moviepy.editor import (
-                TextClip,
-                CompositeVideoClip,
-                AudioFileClip,
-                ColorClip,
-                concatenate_videoclips,
-            )
+            from moviepy.editor import AudioFileClip, concatenate_videoclips
 
             output_path = self.output_dir / output_filename
-            scenes = self._build_scenes(script)
+            plan = (text_effects or {}).get("plan") or {}
+            scenes = self._build_scenes(script, plan=plan)
 
             scene_count = max(1, len(scenes))
             per_scene_duration = max(2, duration / scene_count)
 
-            clips = []
-
-            for index, scene in enumerate(scenes):
-                # warna background per jenis scene
-                if scene["type"] == "hook":
-                    bg_color = (10, 10, 25)
-                    accent_color = "#00F5FF"
-                elif scene["type"] == "cta":
-                    bg_color = (5, 25, 15)
-                    accent_color = "#00FF99"
-                else:
-                    bg_color = (15, 10, 20)
-                    accent_color = "#FFD54F"
-
-                bg_clip = ColorClip(
-                    size=(1080, 1920),
-                    color=bg_color,
-                    duration=per_scene_duration
-                )
-
-                layer_clips = [bg_clip]
-
-                # small top label
-                label_clip = TextClip(
-                    "DIBS AI PROMO",
-                    fontsize=48,
-                    color=accent_color,
-                    font="Arial",
-                    method="caption",
-                    size=(900, 80),
-                    align="center",
-                ).set_duration(per_scene_duration).set_position(("center", 140))
-                layer_clips.append(label_clip)
-
-                # title
-                if scene["title"]:
-                    title_clip = TextClip(
-                        scene["title"],
-                        fontsize=78,
-                        color="white",
-                        font="Arial",
-                        method="caption",
-                        size=(900, 360),
-                        align="center",
-                    ).set_duration(per_scene_duration).set_position(("center", 420))
-                    layer_clips.append(title_clip)
-
-                # body
-                if scene["body"]:
-                    body_y = 760 if scene["title"] else 620
-                    body_clip = TextClip(
-                        scene["body"],
-                        fontsize=56,
-                        color="#F3F4F6",
-                        font="Arial",
-                        method="caption",
-                        size=(900, 700),
-                        align="center",
-                    ).set_duration(per_scene_duration).set_position(("center", body_y))
-                    layer_clips.append(body_clip)
-
-                # bottom accent / CTA bar
-                footer_text = "DIBS AI • UMKM Growth Engine"
-                if scene["type"] == "cta":
-                    footer_text = "Order sekarang • Promo terbatas"
-
-                footer_clip = TextClip(
-                    footer_text,
-                    fontsize=42,
-                    color=accent_color,
-                    font="Arial",
-                    method="caption",
-                    size=(900, 100),
-                    align="center",
-                ).set_duration(per_scene_duration).set_position(("center", 1700))
-                layer_clips.append(footer_clip)
-
-                composite = CompositeVideoClip(layer_clips, size=(1080, 1920)).set_duration(per_scene_duration)
-                composite = composite.fadein(0.35).fadeout(0.35)
-                clips.append(composite)
-
+            clips = [self._make_scene_clip(scene, per_scene_duration) for scene in scenes]
             final_video = concatenate_videoclips(clips, method="compose")
 
             if audio_path and os.path.exists(audio_path):
@@ -236,9 +248,6 @@ class VideoEditor:
             raise
 
     async def generate_audio_from_text(self, text: str, language: str = "id") -> Optional[str]:
-        """
-        Generate audio from text using TTS
-        """
         try:
             from gtts import gTTS
 
@@ -264,7 +273,6 @@ class VideoEditor:
         audio_path: str,
         output_filename: str
     ) -> Optional[str]:
-        """Combine video and audio"""
         try:
             from moviepy.editor import VideoFileClip, AudioFileClip
 
