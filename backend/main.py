@@ -1,3 +1,6 @@
+from routes.customer_routes import router as customer_router
+from routes.customer_chat_routes import router as customer_chat_router
+from routes.chatbot_routes import router as chatbot_router
 """
 DIBS AI - Modular Architecture
 Version 2.0.0
@@ -42,6 +45,7 @@ from auth.routes import router as auth_router, set_database as set_auth_db
 from chat.routes import router as chat_router, set_database as set_chat_db
 from knowledge.routes import router as knowledge_router, set_database as set_knowledge_db
 from video.routes import router as video_router, set_database as set_video_db, set_video_agent
+from video.upload_routes import router as video_upload_router
 from video.vision_routes import router as vision_router
 
 # ===== TOKO MODULE =====
@@ -167,6 +171,7 @@ app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(knowledge_router)
 app.include_router(video_router)
+app.include_router(video_upload_router)
 app.include_router(vision_router)
 app.include_router(toko_router)
 app.include_router(social_router)
@@ -176,6 +181,9 @@ app.include_router(inventory_import_export_router)
 app.include_router(nvidia_router)
 if dibs_router_available:
     app.include_router(dibs_router)
+app.include_router(customer_router)
+app.include_router(customer_chat_router)
+app.include_router(chatbot_router)
 
 # Health endpoint
 @app.get("/health")

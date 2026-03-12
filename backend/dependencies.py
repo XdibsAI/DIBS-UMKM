@@ -117,3 +117,14 @@ async def get_optional_user(
 def get_settings():
     """Dependency untuk settings"""
     return settings
+
+
+async def get_db_manager():
+    global _db_manager
+    if _db_manager is None:
+        _db_manager = DatabaseManager(str(settings.DB_PATH))
+        await _db_manager.connect()
+    try:
+        yield _db_manager
+    finally:
+        pass
