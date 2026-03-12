@@ -104,3 +104,16 @@ downloads/*.apk
 # temp
 frontend/tmp_disabled/
 sample_products.csv
+
+# experiments
+*_backup/
+_broken_backup/
+
+# test
+test_*.py
+
+# temporary fixes
+fix_*.py
+
+# video backup
+*.bak*
