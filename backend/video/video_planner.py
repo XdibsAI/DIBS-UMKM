@@ -1,3 +1,32 @@
+import logging
+logger = logging.getLogger(__name__)
+
+def _default_cta_for_type(video_type: str, prompt: str = "") -> str:
+    vt = str(video_type or "").strip().lower()
+    pr = str(prompt or "").strip().lower()
+
+    if vt in ("motivation", "motivasi"):
+        return "Bangkit hari ini"
+    if vt in ("education", "edukasi", "tutorial"):
+        return "Coba di rumah"
+    if vt in ("review",):
+        return "Tulis pendapatmu"
+    if vt in ("story", "cerita"):
+        return "Lanjut part berikutnya"
+    if vt in ("promo", "product", "jualan", "sales"):
+        return _default_cta_for_type(video_type, prompt)
+
+    # fallback dari prompt
+    if any(x in pr for x in ["motivasi", "semangat", "bangkit"]):
+        return "Bangkit hari ini"
+    if any(x in pr for x in ["edukasi", "belajar", "penjelasan", "tutorial"]):
+        return "Coba di rumah"
+    if any(x in pr for x in ["review", "ulasan"]):
+        return "Tulis pendapatmu"
+
+    return "Ikuti untuk lanjutannya"
+
+
 import re
 from typing import Any, Dict, List, Optional
 
@@ -169,11 +198,11 @@ def _fallback_scenes(
         {"kind": "product", "title": "Produk Unggulan", "text": subject, "caption": "Produk unggulan"},
         {"kind": "benefit", "title": "Kenapa Menarik", "text": "Visual kuat, positioning jelas, dan cocok untuk konten jualan cepat.", "caption": "Kenapa menarik"},
         {"kind": "offer", "title": "Penawaran", "text": f"Mulai dari {price_text}" if price_text else "Ada penawaran spesial untuk waktu terbatas.", "caption": "Penawaran spesial"},
-        {"kind": "cta", "title": "Aksi Sekarang", "text": cta_text or "Order sekarang sebelum kehabisan.", "caption": "Order sekarang"},
+        {"kind": "cta", "title": "Aksi Sekarang", "text": cta_text or "Order sekarang sebelum kehabisan.", "caption": _default_cta_for_type(video_type, prompt)},
     ]
 
 
-def build_plan(
+async def build_plan(
     prompt: str,
     duration: int = 15,
     style: str = "premium",
@@ -195,11 +224,54 @@ def build_plan(
     final_cta = cta_text or (
         "Bagikan video ini dengan yang membutuhkan motivasi!"
         if final_type == "motivasi"
-        else "Order sekarang"
+        else _default_cta_for_type(video_type, prompt)
     )
 
     scenes = _parse_structured_scenes(prompt)
+
+    
+
     if not scenes:
+
+        # Try LLM parsing first
+
+        try:
+
+            from .llm_parser import parse_prompt_with_llm
+
+            llm_result = await parse_prompt_with_llm(prompt)
+
+            if llm_result and "scenes" in llm_result:
+
+                scenes = llm_result["scenes"]
+
+                logger.info("✅ LLM parsing successful")
+
+        except ImportError:
+
+            logger.warning("⚠️ llm_parser not available, using fallback")
+
+        except Exception as e:
+
+            logger.warning(f"⚠️ LLM parsing failed: {e}, using fallback")
+
+    
+
+    if not scenes:
+
+        scenes = _fallback_scenes(
+
+            prompt=prompt,
+
+            video_type=final_type,
+
+            subject=product_name or title,
+
+            cta_text=final_cta,
+
+            price_text=price_text or "",
+
+        )
         scenes = _fallback_scenes(
             prompt=prompt,
             video_type=final_type,
@@ -251,7 +323,7 @@ def build_plan(
 
 
 class VideoPlanner:
-    def build_plan(
+    async def build_plan(
         self,
         prompt: str,
         duration: int = 15,
@@ -263,7 +335,7 @@ class VideoPlanner:
         brand_name=None,
         product_image_url=None,
     ):
-        return build_plan(
+        return await build_plan(
             prompt=prompt,
             duration=duration,
             style=style,

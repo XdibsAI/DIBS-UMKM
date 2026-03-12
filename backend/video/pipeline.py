@@ -1,3 +1,4 @@
+from typing import List
 """
 Video Pipeline with prompt planning support + thumbnails
 """
@@ -71,10 +72,6 @@ def resolve_visual_image(uploaded_image_path, uploaded_image_paths, product_imag
         return None
 
 
-def resolve_visual_image(uploaded_image_path, product_image_url, product_name, prompt, plan):
-    try:
-        if uploaded_image_path and isinstance(uploaded_image_path, str) and os.path.exists(uploaded_image_path):
-            return uploaded_image_path
 
         if product_image_url and isinstance(product_image_url, str) and product_image_url.strip():
             return product_image_url.strip()
@@ -145,7 +142,7 @@ class VideoPipeline:
         await self._ensure_columns()
 
         project_id = str(uuid.uuid4())
-        plan = video_planner.build_plan(
+        plan = await video_planner.build_plan(
             prompt=prompt,
             duration=duration,
             style=style,
@@ -221,7 +218,7 @@ class VideoPipeline:
         try:
             await self._update_status(project_id, VideoStatus.PLANNING)
 
-            plan = video_planner.build_plan(
+            plan = await video_planner.build_plan(
                 prompt=prompt,
                 duration=duration,
                 style=style,

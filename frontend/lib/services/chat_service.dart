@@ -20,12 +20,13 @@ class ChatService extends ChangeNotifier {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      if (_token != null && _token!.isNotEmpty) 
+      if (_token != null && _token!.isNotEmpty)
         'Authorization': 'Bearer $_token',
     };
   }
 
-  void setNavigationContext(BuildContext context, {required String currentRoute}) {
+  void setNavigationContext(BuildContext context,
+      {required String currentRoute}) {
     _navigationContext = context;
     _currentRoute = currentRoute;
     debugPrint("🔐 Navigation context set for route: $currentRoute");

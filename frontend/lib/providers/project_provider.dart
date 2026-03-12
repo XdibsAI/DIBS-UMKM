@@ -61,7 +61,8 @@ class ProjectProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> addKnowledge(String content, {String category = 'general'}) async {
+  Future<bool> addKnowledge(String content,
+      {String category = 'general'}) async {
     try {
       final res = await ApiService.addKnowledge({
         'content': content,
@@ -80,7 +81,8 @@ class ProjectProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateKnowledgeItem(int id, String content, {String category = 'general'}) async {
+  Future<bool> updateKnowledgeItem(int id, String content,
+      {String category = 'general'}) async {
     try {
       final res = await ApiService.updateKnowledge(id, {
         'content': content,

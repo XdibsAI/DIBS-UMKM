@@ -44,8 +44,7 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
         final total = data['total_processed'] ?? 0;
 
         setState(() {
-          _lastResult =
-              'Import berhasil\n'
+          _lastResult = 'Import berhasil\n'
               'Inserted: $inserted\n'
               'Updated: $updated\n'
               'Skipped: $skipped\n'
@@ -123,7 +122,8 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
       }
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${targetDir.path}/dibs_products_backup_$timestamp.csv');
+      final file =
+          File('${targetDir.path}/dibs_products_backup_$timestamp.csv');
       await file.writeAsBytes(bytes);
 
       setState(() {
@@ -199,7 +199,8 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.upload_file),
-                      label: Text(_isImporting ? 'Mengimpor...' : 'Import CSV Produk'),
+                      label: Text(
+                          _isImporting ? 'Mengimpor...' : 'Import CSV Produk'),
                     ),
                   ),
                 ],
@@ -233,7 +234,8 @@ class _ImportExportScreenState extends State<ImportExportScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.download),
-                      label: Text(_isExporting ? 'Mengekspor...' : 'Export Backup CSV'),
+                      label: Text(
+                          _isExporting ? 'Mengekspor...' : 'Export Backup CSV'),
                     ),
                   ),
                 ],

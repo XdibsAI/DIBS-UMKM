@@ -75,7 +75,8 @@ class TokoProvider extends ChangeNotifier {
         final data = json.decode(response.body);
         _products = List<Map<String, dynamic>>.from(data['data'] ?? []);
         print('🔵 [LOAD] Loaded ${_products.length} products');
-        print('🔵 [LOAD] Products: ${_products.map((p) => p['name']).toList()}');
+        print(
+            '🔵 [LOAD] Products: ${_products.map((p) => p['name']).toList()}');
       } else {
         print('🔴 [LOAD] Failed: ${response.statusCode}');
       }
@@ -235,7 +236,8 @@ class TokoProvider extends ChangeNotifier {
     if (productName.contains(input) && input.length >= 4) return 75;
 
     final inputWords = input.split(' ').where((e) => e.isNotEmpty).toSet();
-    final productWords = productName.split(' ').where((e) => e.isNotEmpty).toSet();
+    final productWords =
+        productName.split(' ').where((e) => e.isNotEmpty).toSet();
 
     if (inputWords.isEmpty || productWords.isEmpty) return 0;
 
@@ -265,8 +267,9 @@ class TokoProvider extends ChangeNotifier {
 
     if (existingIndex >= 0) {
       _cartItems[existingIndex]['quantity'] += quantity;
-      _cartItems[existingIndex]['subtotal'] =
-          _cartItems[existingIndex]['quantity'] * _asInt(_cartItems[existingIndex]['price']);
+      _cartItems[existingIndex]['subtotal'] = _cartItems[existingIndex]
+              ['quantity'] *
+          _asInt(_cartItems[existingIndex]['price']);
     } else {
       _cartItems.add({
         'id': product['id'],
@@ -340,7 +343,6 @@ class TokoProvider extends ChangeNotifier {
     }
   }
 
-
   Future<Map<String, dynamic>> processVoiceScan(String text) async {
     print('🎤 [VOICE] Input: "$text"');
     _lastVoiceText = text;
@@ -413,12 +415,14 @@ class TokoProvider extends ChangeNotifier {
       'score': bestScore,
     };
 
-    print('✅ [VOICE] MATCH: ${bestProduct['name']} x$quantity | score=$bestScore');
+    print(
+        '✅ [VOICE] MATCH: ${bestProduct['name']} x$quantity | score=$bestScore');
     notifyListeners();
     return result;
   }
 
-  Future<Map<String, dynamic>> scanBarcode(String barcode, {int quantity = 1}) async {
+  Future<Map<String, dynamic>> scanBarcode(String barcode,
+      {int quantity = 1}) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/sales/scan-barcode'),
@@ -435,7 +439,8 @@ class TokoProvider extends ChangeNotifier {
         return Map<String, dynamic>.from(data);
       }
 
-      throw Exception(data['detail'] ?? data['message'] ?? 'Gagal scan barcode');
+      throw Exception(
+          data['detail'] ?? data['message'] ?? 'Gagal scan barcode');
     } catch (e) {
       print('❌ [BARCODE] Error: $e');
       rethrow;

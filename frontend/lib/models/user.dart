@@ -19,7 +19,8 @@ class User {
       email: json['email'] ?? '',
       displayName: json['display_name'] ?? json['name'] ?? 'User',
       gender: json['gender'], // TAMBAH
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 

@@ -10,14 +10,15 @@ class SocialScreen extends StatefulWidget {
   State<SocialScreen> createState() => _SocialScreenState();
 }
 
-class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderStateMixin {
+class _SocialScreenState extends State<SocialScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SocialProvider>().loadAccounts();
       context.read<SocialProvider>().loadPosts();
@@ -40,11 +41,15 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
         elevation: 0,
         title: Text(
           'Social Media',
-          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 24, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 24,
+              fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF00FFFF)),
+            icon:
+                const Icon(Icons.add_circle_outline, color: Color(0xFF00FFFF)),
             onPressed: () => _showCreatePostDialog(),
             tooltip: 'Create Post',
           ),
@@ -77,7 +82,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     return Consumer<SocialProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
         }
 
         final analytics = provider.analytics;
@@ -90,24 +96,31 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
               // Connected Accounts
               const Text(
                 'Connected Accounts',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              
+
               if (provider.accounts.isEmpty)
                 _buildEmptyAccounts()
               else
-                ...provider.accounts.map((account) => _buildAccountCard(account)),
-              
+                ...provider.accounts
+                    .map((account) => _buildAccountCard(account)),
+
               const SizedBox(height: 24),
-              
+
               // Analytics Cards
               const Text(
                 'Analytics Overview',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              
+
               Row(
                 children: [
                   Expanded(
@@ -129,9 +142,9 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               Row(
                 children: [
                   Expanded(
@@ -153,9 +166,9 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Best posting time
               if (analytics['best_time'] != null)
                 Container(
@@ -163,11 +176,13 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.access_time, color: Color(0xFF00FFFF), size: 32),
+                      const Icon(Icons.access_time,
+                          color: Color(0xFF00FFFF), size: 32),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -175,7 +190,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                           children: [
                             const Text(
                               'Best Posting Time',
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                             Text(
                               analytics['best_time'],
@@ -211,7 +227,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
           const SizedBox(height: 16),
           const Text(
             'No Accounts Connected',
-            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -237,10 +254,10 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
   Widget _buildAccountCard(Map<String, dynamic> account) {
     final platform = account['platform'] ?? 'unknown';
     final username = account['username'] ?? 'Unknown';
-    
+
     IconData icon;
     Color color;
-    
+
     switch (platform.toLowerCase()) {
       case 'instagram':
         icon = Icons.camera_alt;
@@ -262,7 +279,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
         icon = Icons.public;
         color = Colors.grey;
     }
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -283,7 +300,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
               children: [
                 Text(
                   platform.toUpperCase(),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '@$username',
@@ -308,7 +326,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String title, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -323,7 +342,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: color, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           Text(
             title,
@@ -339,7 +359,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     return Consumer<SocialProvider>(
       builder: (context, provider, child) {
         if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00FFFF)));
         }
 
         if (provider.posts.isEmpty) {
@@ -366,7 +387,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00FFFF),
                     foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                   ),
                 ),
               ],
@@ -391,10 +413,10 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     final content = post['content'] ?? '';
     final status = post['status'] ?? 'draft';
     final scheduledAt = post['scheduled_at'];
-    
+
     Color statusColor;
     String statusText;
-    
+
     switch (status) {
       case 'published':
         statusColor = Colors.green;
@@ -408,7 +430,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
         statusColor = Colors.grey;
         statusText = 'Draft';
     }
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -430,7 +452,10 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 ),
                 child: Text(
                   platform.toUpperCase(),
-                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: statusColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 8),
@@ -447,7 +472,8 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                icon: const Icon(Icons.delete_outline,
+                    color: Colors.red, size: 20),
                 onPressed: () => _deletePost(post['id'], provider),
               ),
             ],
@@ -488,7 +514,10 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
             children: [
               const Text(
                 'AI Caption Generator',
-                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -496,7 +525,6 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              
               ElevatedButton.icon(
                 onPressed: () => _showAIGeneratorDialog(),
                 icon: const Icon(Icons.auto_fix_high),
@@ -504,16 +532,19 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF00FFFF),
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   minimumSize: const Size(double.infinity, 0),
                 ),
               ),
-              
               if (provider.generatedCaption.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 const Text(
                   'Generated Caption:',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 Container(
@@ -521,14 +552,16 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    border: Border.all(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         provider.generatedCaption,
-                        style: const TextStyle(color: Colors.white, height: 1.5),
+                        style:
+                            const TextStyle(color: Colors.white, height: 1.5),
                       ),
                       if (provider.suggestedHashtags.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -538,8 +571,10 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                           children: provider.suggestedHashtags.map((tag) {
                             return Chip(
                               label: Text(tag),
-                              backgroundColor: const Color(0xFF00FFFF).withOpacity(0.2),
-                              labelStyle: const TextStyle(color: Color(0xFF00FFFF)),
+                              backgroundColor:
+                                  const Color(0xFF00FFFF).withOpacity(0.2),
+                              labelStyle:
+                                  const TextStyle(color: Color(0xFF00FFFF)),
                             );
                           }).toList(),
                         ),
@@ -557,14 +592,16 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
                               label: const Text('Copy'),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFF00FFFF),
-                                side: const BorderSide(color: Color(0xFF00FFFF)),
+                                side:
+                                    const BorderSide(color: Color(0xFF00FFFF)),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => _useGeneratedCaption(provider.generatedCaption),
+                              onPressed: () => _useGeneratedCaption(
+                                  provider.generatedCaption),
                               icon: const Icon(Icons.send),
                               label: const Text('Use Caption'),
                               style: ElevatedButton.styleFrom(
@@ -591,7 +628,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     final platformController = TextEditingController();
     final usernameController = TextEditingController();
     String selectedPlatform = 'Instagram';
-    
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -631,20 +668,22 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
           ),
           ElevatedButton(
             onPressed: () async {
-              final success = await context.read<SocialProvider>().connectAccount(
-                platform: selectedPlatform.toLowerCase(),
-                username: usernameController.text,
-              );
-              
+              final success =
+                  await context.read<SocialProvider>().connectAccount(
+                        platform: selectedPlatform.toLowerCase(),
+                        username: usernameController.text,
+                      );
+
               Navigator.pop(ctx);
-              
+
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('✅ Account connected!')),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00FFFF)),
             child: const Text('Connect', style: TextStyle(color: Colors.black)),
           ),
         ],
@@ -656,7 +695,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     final contentController = TextEditingController();
     String selectedPlatform = 'instagram';
     DateTime? scheduledTime;
-    
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -701,21 +740,23 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
           ElevatedButton(
             onPressed: () async {
               final success = await context.read<SocialProvider>().createPost(
-                platform: selectedPlatform,
-                content: contentController.text,
-                scheduledAt: scheduledTime ?? DateTime.now(),
-              );
-              
+                    platform: selectedPlatform,
+                    content: contentController.text,
+                    scheduledAt: scheduledTime ?? DateTime.now(),
+                  );
+
               Navigator.pop(ctx);
-              
+
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('✅ Post scheduled!')),
                 );
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
-            child: const Text('Schedule', style: TextStyle(color: Colors.black)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00FFFF)),
+            child:
+                const Text('Schedule', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -726,12 +767,13 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
     final topicController = TextEditingController();
     String selectedPlatform = 'instagram';
     String selectedTone = 'friendly';
-    
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: Text('AI Caption Generator', style: TextStyle(color: Colors.white)),
+        title:
+            Text('AI Caption Generator', style: TextStyle(color: Colors.white)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -776,15 +818,17 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
           ElevatedButton(
             onPressed: () async {
               await context.read<SocialProvider>().generateCaption(
-                topic: topicController.text,
-                platform: selectedPlatform,
-                tone: selectedTone,
-              );
-              
+                    topic: topicController.text,
+                    platform: selectedPlatform,
+                    tone: selectedTone,
+                  );
+
               Navigator.pop(ctx);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00FFFF)),
-            child: const Text('Generate', style: TextStyle(color: Colors.black)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00FFFF)),
+            child:
+                const Text('Generate', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -810,7 +854,7 @@ class _SocialScreenState extends State<SocialScreen> with SingleTickerProviderSt
             onPressed: () async {
               await provider.deletePost(postId);
               Navigator.pop(ctx);
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('✅ Post deleted')),
               );

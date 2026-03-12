@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/video_service.dart';
 import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +18,38 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  bool _isDownloading = false;
+
+  Future<void> _downloadVideo() async {
+    try {
+      setState(() => _isDownloading = true);
+
+      final url = widget.videoUrl;
+      if (url.trim().isEmpty) {
+        throw Exception('URL video kosong');
+      }
+
+      final filePath = await VideoService.downloadVideo(
+        url: url,
+        fileName: 'dibs_${DateTime.now().millisecondsSinceEpoch}.mp4',
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Video tersimpan di: $filePath')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Download gagal: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isDownloading = false);
+      }
+    }
+  }
+
   late VideoPlayerController _controller;
   bool _isInitialized = false;
   bool _isPlaying = false;

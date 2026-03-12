@@ -35,26 +35,36 @@ class Project {
       videoPath: json['video_path'],
       thumbnailPath: json['thumbnail_path'],
       duration: json['duration'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updated_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(
+          json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
   String get statusIcon {
     switch (status) {
-      case 'completed': return '✅';
-      case 'processing': return '🔄';
-      case 'failed': return '❌';
-      default: return '📝';
+      case 'completed':
+        return '✅';
+      case 'processing':
+        return '🔄';
+      case 'failed':
+        return '❌';
+      default:
+        return '📝';
     }
   }
 
   Color get statusColor {
     switch (status) {
-      case 'completed': return Colors.green;
-      case 'processing': return Colors.orange;
-      case 'failed': return Colors.red;
-      default: return Colors.grey;
+      case 'completed':
+        return Colors.green;
+      case 'processing':
+        return Colors.orange;
+      case 'failed':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 }

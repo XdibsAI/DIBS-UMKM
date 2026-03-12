@@ -1,85 +1,79 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
-import '../models/video_project.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class VideoService {
-  static const String baseUrl = 'http://94.100.26.128:8081/api/v1';
-  static String? _token;
+  static Future<bool> _requestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
 
-  static Future<void> login(String email, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-      }),
-    );
+    final manage = await Permission.manageExternalStorage.request();
+    if (manage.isGranted) return true;
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      _token = data['data']['token'];
-    } else {
-      throw Exception('Login failed');
-    }
+    final media = await Permission.videos.request();
+    if (media.isGranted) return true;
+
+    final storage = await Permission.storage.request();
+    if (storage.isGranted) return true;
+
+    return false;
   }
 
-  static Future<List<VideoProject>> getVideoProjects() async {
-    if (_token == null) {
-      throw Exception('Not authenticated');
+  static Future<Directory> _ensureVideoDir() async {
+    final dir = Directory('/storage/emulated/0/Movies/DIBS');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
     }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/video/list'),
-      headers: {
-        'Authorization': 'Bearer $_token',
-        'Content-Type': 'application/json',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final List<dynamic> projectList = data['data'] ?? [];
-      return projectList.map((json) => VideoProject.fromJson(json)).toList();
-    } else {
-      throw Exception('Failed to fetch videos');
-    }
+    return dir;
   }
 
-  static Future<VideoProject> getVideoDetail(String projectId) async {
-    if (_token == null) {
-      throw Exception('Not authenticated');
+  static String _safeFileName(String input) {
+    var name = input.trim();
+    if (name.isEmpty) {
+      name = 'video_${DateTime.now().millisecondsSinceEpoch}.mp4';
     }
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/video/status/$projectId'),
-      headers: {
-        'Authorization': 'Bearer $_token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return VideoProject.fromJson(data['data']);
-    } else {
-      throw Exception('Failed to fetch video details');
+    name = name
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '_')
+        .replaceAll(RegExp(r'\s+'), '_');
+    if (!name.toLowerCase().endsWith('.mp4')) {
+      name = '$name.mp4';
     }
+    return name;
   }
 
-  static Future<void> deleteVideo(String projectId) async {
-    if (_token == null) {
-      throw Exception('Not authenticated');
+  static Future<String> downloadVideo({
+    required String url,
+    String? fileName,
+    String? bearerToken,
+  }) async {
+    final ok = await _requestStoragePermission();
+    if (!ok) {
+      throw Exception('Izin penyimpanan ditolak');
     }
 
-    final response = await http.delete(
-      Uri.parse('$baseUrl/video/$projectId'),
-      headers: {
-        'Authorization': 'Bearer $_token',
-      },
-    );
+    final dir = await _ensureVideoDir();
+    final finalName = _safeFileName(fileName ?? '');
+    final savePath = '${dir.path}/$finalName';
 
-    if (response.statusCode != 200) {
-      throw Exception('Failed to delete video');
+    final headers = <String, String>{};
+    if (bearerToken != null && bearerToken.trim().isNotEmpty) {
+      headers['Authorization'] = 'Bearer ${bearerToken.trim()}';
     }
+
+    final response = await http.get(Uri.parse(url), headers: headers);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('HTTP ${response.statusCode}');
+    }
+
+    final file = File(savePath);
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+
+    final size = await file.length();
+    if (size < 1024) {
+      throw Exception('File video terlalu kecil / tidak valid');
+    }
+
+    debugPrint('Video saved to: $savePath');
+    return savePath;
   }
 }

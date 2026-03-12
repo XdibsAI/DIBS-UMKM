@@ -16,7 +16,8 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
+class _ChatScreenState extends State<ChatScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -100,30 +101,30 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF12121A) 
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF12121A)
             : Colors.white,
         title: Text(
           'Chat Baru',
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF00FFFF) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF00FFFF)
                 : const Color(0xFF0088CC),
           ),
         ),
         content: Text(
           'Mulai percakapan baru? Chat saat ini akan disimpan ke riwayat.',
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFFE0E0FF) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFE0E0FF)
                 : Colors.black87,
           ),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF00FFFF) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF00FFFF)
                 : const Color(0xFF0088CC),
             width: 0.5,
           ),
@@ -132,8 +133,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFF8888AA) 
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF8888AA)
                   : Colors.grey.shade700,
             ),
             child: const Text('Batal'),
@@ -141,11 +142,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFF00FFFF) 
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF00FFFF)
                   : const Color(0xFF0088CC),
-              foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFF0A0A0F) 
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF0A0A0F)
                   : Colors.white,
             ),
             child: const Text('Chat Baru'),
@@ -163,15 +164,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           SnackBar(
             content: Text('✨ Chat baru dimulai'),
             duration: Duration(seconds: 1),
-            backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFF12121A) 
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF12121A)
                 : Colors.white,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
               side: BorderSide(
-                color: Theme.of(context).brightness == Brightness.dark 
-                    ? const Color(0xFF00FFFF) 
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF00FFFF)
                     : const Color(0xFF0088CC),
                 width: 0.5,
               ),
@@ -188,30 +189,30 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF12121A) 
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF12121A)
             : Colors.white,
         title: Text(
           'Hapus Chat',
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFFFF44AA) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFF44AA)
                 : Colors.red,
           ),
         ),
         content: Text(
           'Yakin ingin menghapus chat ini?',
           style: TextStyle(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFFE0E0FF) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFE0E0FF)
                 : Colors.black87,
           ),
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: Theme.of(context).brightness == Brightness.dark 
-                ? const Color(0xFFFF44AA) 
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFFFF44AA)
                 : Colors.red.shade300,
             width: 0.5,
           ),
@@ -220,8 +221,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFF8888AA) 
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF8888AA)
                   : Colors.grey.shade700,
             ),
             child: const Text('Batal'),
@@ -229,8 +230,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).brightness == Brightness.dark 
-                  ? const Color(0xFFFF44AA) 
+              foregroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFFFF44AA)
                   : Colors.red,
             ),
             child: const Text('Hapus'),
@@ -258,7 +259,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   void _showCopyMenu(BuildContext ctx, String content) {
     final isDark = Theme.of(ctx).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: ctx,
       backgroundColor: isDark ? const Color(0xFF12121A) : Colors.white,
@@ -278,7 +279,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: isDark 
+                color: isDark
                     ? const Color(0xFF00FFFF).withOpacity(0.3)
                     : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(2),
@@ -286,8 +287,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             ),
             ListTile(
               leading: Icon(
-                Icons.copy, 
-                color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                Icons.copy,
+                color:
+                    isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
               ),
               title: Text(
                 'Salin Pesan',
@@ -302,12 +304,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   SnackBar(
                     content: Text('Pesan disalin'),
                     duration: Duration(seconds: 1),
-                    backgroundColor: isDark ? const Color(0xFF12121A) : Colors.white,
+                    backgroundColor:
+                        isDark ? const Color(0xFF12121A) : Colors.white,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.all(Radius.circular(12)),
                       side: BorderSide(
-                        color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                        color: isDark
+                            ? const Color(0xFF00FFFF)
+                            : const Color(0xFF0088CC),
                         width: 0.5,
                       ),
                     ),
@@ -324,7 +329,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   Widget _buildWelcome(String userName) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -339,13 +344,17 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                      color: (isDark
+                              ? const Color(0xFF00FFFF)
+                              : const Color(0xFF0088CC))
                           .withOpacity(_glowAnimation.value),
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                        color: (isDark
+                                ? const Color(0xFF00FFFF)
+                                : const Color(0xFF0088CC))
                             .withOpacity(_glowAnimation.value * 0.3),
                         blurRadius: 30,
                         spreadRadius: 10,
@@ -354,7 +363,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   ),
                   child: Icon(
                     Icons.bolt,
-                    color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                    color: isDark
+                        ? const Color(0xFF00FFFF)
+                        : const Color(0xFF0088CC),
                     size: 48,
                   ),
                 );
@@ -376,7 +387,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               'Ada yang bisa DIBS bantu hari ini?\nSilakan kirim pesan Anda.',
               style: TextStyle(
                 fontSize: 16,
-                color: isDark 
+                color: isDark
                     ? const Color(0xFF8888AA).withOpacity(0.8)
                     : Colors.grey.shade600,
                 height: 1.5,
@@ -389,11 +400,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               runSpacing: 10,
               alignment: WrapAlignment.center,
               children: [
-                _buildSuggestionChip('💡 Bantu saya dengan ide', 
+                _buildSuggestionChip('💡 Bantu saya dengan ide',
                     isDark ? const Color(0xFFFF44AA) : Colors.blue),
-                _buildSuggestionChip('📝 Buatkan ringkasan', 
+                _buildSuggestionChip('📝 Buatkan ringkasan',
                     isDark ? const Color(0xFF9D4DFF) : Colors.purple),
-                _buildSuggestionChip('🔍 Cari informasi', 
+                _buildSuggestionChip('🔍 Cari informasi',
                     isDark ? const Color(0xFF00FFAA) : Colors.green),
               ],
             ),
@@ -405,7 +416,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   Widget _buildSuggestionChip(String label, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return ActionChip(
       label: Text(
         label,
@@ -425,7 +436,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   Widget _buildThinkingBubble(String text) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Row(
@@ -434,11 +445,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
-                  .withOpacity(0.1),
+              color:
+                  (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                      .withOpacity(0.1),
               shape: BoxShape.circle,
               border: Border.all(
-                color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                color:
+                    isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
                 width: 1,
               ),
             ),
@@ -461,7 +474,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   bottomLeft: Radius.circular(4),
                 ),
                 border: Border.all(
-                  color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                  color: (isDark
+                          ? const Color(0xFF00FFFF)
+                          : const Color(0xFF0088CC))
                       .withOpacity(0.3),
                   width: 0.5,
                 ),
@@ -475,7 +490,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                        (isDark
+                                ? const Color(0xFF00FFFF)
+                                : const Color(0xFF0088CC))
                             .withOpacity(_glowAnimation.value),
                       ),
                     ),
@@ -486,7 +503,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       text,
                       style: TextStyle(
                         fontSize: 14,
-                        color: isDark ? const Color(0xFFE0E0FF) : Colors.black87,
+                        color:
+                            isDark ? const Color(0xFFE0E0FF) : Colors.black87,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -518,13 +536,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // AI bubble: cyan di dark mode, biru di light mode
     final bubbleColor = isUser
         ? (isDark ? Colors.grey.shade800 : Colors.grey.shade200)
-        : (isDark 
-            ? const Color(0xFF00FFFF).withOpacity(0.15) 
+        : (isDark
+            ? const Color(0xFF00FFFF).withOpacity(0.15)
             : const Color(0xFF0088CC).withOpacity(0.1));
 
     final borderColor = isUser
         ? Colors.transparent
-        : (isDark 
+        : (isDark
             ? const Color(0xFF00FFFF).withOpacity(0.5)
             : const Color(0xFF0088CC).withOpacity(0.5));
 
@@ -534,13 +552,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
     final timeTextColor = isUser
         ? (isDark ? Colors.grey.shade500 : Colors.grey.shade600)
-        : (isDark 
+        : (isDark
             ? const Color(0xFF00FFFF).withOpacity(0.5)
             : const Color(0xFF0088CC).withOpacity(0.5));
 
     final copyIconColor = isUser
         ? (isDark ? Colors.grey.shade600 : Colors.grey.shade500)
-        : (isDark 
+        : (isDark
             ? const Color(0xFF00FFFF).withOpacity(0.3)
             : const Color(0xFF0088CC).withOpacity(0.3));
 
@@ -549,24 +567,31 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Row(
-          mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+          mainAxisAlignment:
+              isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (!isUser) ...[
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                  color: (isDark
+                          ? const Color(0xFF00FFFF)
+                          : const Color(0xFF0088CC))
                       .withOpacity(0.1),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                    color: isDark
+                        ? const Color(0xFF00FFFF)
+                        : const Color(0xFF0088CC),
                     width: 1,
                   ),
                 ),
                 child: Icon(
                   Icons.bolt,
-                  color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                  color: isDark
+                      ? const Color(0xFF00FFFF)
+                      : const Color(0xFF0088CC),
                   size: 16,
                 ),
               ),
@@ -598,27 +623,35 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         styleSheet: MarkdownStyleSheet(
                           p: TextStyle(
                             fontSize: 14,
-                            color: isUser 
+                            color: isUser
                                 ? (isDark ? Colors.white : Colors.black87)
-                                : (isDark ? const Color(0xFFE0E0FF) : Colors.black87),
+                                : (isDark
+                                    ? const Color(0xFFE0E0FF)
+                                    : Colors.black87),
                           ),
                           tableHead: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: isUser 
+                            color: isUser
                                 ? (isDark ? Colors.white : Colors.black87)
-                                : (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC)),
+                                : (isDark
+                                    ? const Color(0xFF00FFFF)
+                                    : const Color(0xFF0088CC)),
                             fontSize: 13,
                           ),
                           tableBody: TextStyle(
                             fontSize: 13,
-                            color: isUser 
+                            color: isUser
                                 ? (isDark ? Colors.white70 : Colors.black87)
-                                : (isDark ? const Color(0xFFE0E0FF) : Colors.black87),
+                                : (isDark
+                                    ? const Color(0xFFE0E0FF)
+                                    : Colors.black87),
                           ),
                           tableBorder: TableBorder.all(
                             color: isUser
-                                ? (isDark ? Colors.grey.shade700 : Colors.grey.shade300)
-                                : (isDark 
+                                ? (isDark
+                                    ? Colors.grey.shade700
+                                    : Colors.grey.shade300)
+                                : (isDark
                                     ? const Color(0xFF00FFFF).withOpacity(0.3)
                                     : const Color(0xFF0088CC).withOpacity(0.3)),
                             width: 1,
@@ -635,9 +668,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         message.content,
                         style: TextStyle(
                           fontSize: 14,
-                          color: isUser 
+                          color: isUser
                               ? (isDark ? Colors.white : Colors.black87)
-                              : (isDark ? const Color(0xFFE0E0FF) : Colors.black87),
+                              : (isDark
+                                  ? const Color(0xFFE0E0FF)
+                                  : Colors.black87),
                           height: 1.5,
                         ),
                       ),
@@ -668,7 +703,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               const SizedBox(width: 12),
               CircleAvatar(
                 radius: 16,
-                backgroundColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                backgroundColor:
+                    isDark ? Colors.grey.shade700 : Colors.grey.shade300,
                 child: Icon(
                   Icons.person,
                   size: 14,
@@ -682,10 +718,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     );
   }
 
-
   void _showAttachmentMenu() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? Colors.grey.shade900 : Colors.white,
@@ -716,7 +751,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 ),
                 title: Text(
                   '📷 Gambar untuk Analisa',
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  style:
+                      TextStyle(color: isDark ? Colors.white : Colors.black87),
                 ),
                 subtitle: Text(
                   'JPG, PNG - DIBS akan analisa gambar',
@@ -731,7 +767,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 },
               ),
 
-              Divider(color: isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+              Divider(
+                  color: isDark ? Colors.grey.shade800 : Colors.grey.shade300),
 
               // 📄 Dokumen
               ListTile(
@@ -741,7 +778,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 ),
                 title: Text(
                   '📄 Dokumen',
-                  style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                  style:
+                      TextStyle(color: isDark ? Colors.white : Colors.black87),
                 ),
                 subtitle: Text(
                   'PDF, DOC, CSV, TXT - DIBS akan baca isi',
@@ -778,7 +816,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
         // TODO: Upload ke backend untuk analisa
         setState(() {
-          _messageController.text = '🖼️ [Gambar terlampir: $fileName] - Tolong analisa gambar ini';
+          _messageController.text =
+              '🖼️ [Gambar terlampir: $fileName] - Tolong analisa gambar ini';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -811,7 +850,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
         // TODO: Upload ke backend
         setState(() {
-          _messageController.text = '📄 [Dokumen terlampir: $fileName ($fileSizeMB MB)] - Tolong baca dan ringkas isi dokumen ini';
+          _messageController.text =
+              '📄 [Dokumen terlampir: $fileName ($fileSizeMB MB)] - Tolong baca dan ringkas isi dokumen ini';
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -835,7 +875,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       builder: (context, chatProvider, _) {
         return Scaffold(
           key: _scaffoldKey,
-          backgroundColor: isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF5F5F5),
+          backgroundColor:
+              isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF5F5F5),
           appBar: AppBar(
             title: AnimatedBuilder(
               animation: _glowAnimation,
@@ -843,14 +884,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 return Text(
                   chatProvider.currentSession?['name'] ?? 'DIBS AI',
                   style: TextStyle(
-                    color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                    color: (isDark
+                            ? const Color(0xFF00FFFF)
+                            : const Color(0xFF0088CC))
                         .withOpacity(_glowAnimation.value),
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1,
                     shadows: [
                       Shadow(
-                        color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                        color: (isDark
+                                ? const Color(0xFF00FFFF)
+                                : const Color(0xFF0088CC))
                             .withOpacity(_glowAnimation.value * 0.5),
                         blurRadius: 10,
                       ),
@@ -865,7 +910,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             leading: IconButton(
               icon: Icon(
                 Icons.menu,
-                color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                color:
+                    isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
               ),
               onPressed: () => _scaffoldKey.currentState?.openDrawer(),
             ),
@@ -873,14 +919,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               IconButton(
                 icon: Icon(
                   Icons.add_comment,
-                  color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                  color: isDark
+                      ? const Color(0xFF00FFFF)
+                      : const Color(0xFF0088CC),
                 ),
                 onPressed: _createNewSession,
                 tooltip: 'Chat Baru',
               ),
             ],
           ),
-
           drawer: Drawer(
             backgroundColor: isDark ? const Color(0xFF0A0A0F) : Colors.white,
             child: Column(
@@ -898,7 +945,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         : LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [const Color(0xFF0088CC), Colors.purple.shade300],
+                            colors: [
+                              const Color(0xFF0088CC),
+                              Colors.purple.shade300
+                            ],
                           ),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
@@ -913,7 +963,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? const Color(0xFF0A0A0F) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF0A0A0F) : Colors.white,
                           letterSpacing: 2,
                         ),
                       ),
@@ -921,7 +972,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       Text(
                         userName,
                         style: TextStyle(
-                          color: isDark ? const Color(0xFF0A0A0F) : Colors.white,
+                          color:
+                              isDark ? const Color(0xFF0A0A0F) : Colors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -930,8 +982,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       Text(
                         'Chat History',
                         style: TextStyle(
-                          color: (isDark ? const Color(0xFF0A0A0F) : Colors.white)
-                              .withOpacity(0.7),
+                          color:
+                              (isDark ? const Color(0xFF0A0A0F) : Colors.white)
+                                  .withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -943,7 +996,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       ? Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                              isDark
+                                  ? const Color(0xFF00FFFF)
+                                  : const Color(0xFF0088CC),
                             ),
                           ),
                         )
@@ -955,16 +1010,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                   Icon(
                                     Icons.history,
                                     size: 48,
-                                    color: isDark 
-                                        ? const Color(0xFF8888AA).withOpacity(0.5)
+                                    color: isDark
+                                        ? const Color(0xFF8888AA)
+                                            .withOpacity(0.5)
                                         : Colors.grey.shade400,
                                   ),
                                   const SizedBox(height: 16),
                                   Text(
                                     'Belum ada chat',
                                     style: TextStyle(
-                                      color: isDark 
-                                          ? const Color(0xFF8888AA).withOpacity(0.8)
+                                      color: isDark
+                                          ? const Color(0xFF8888AA)
+                                              .withOpacity(0.8)
                                           : Colors.grey.shade600,
                                     ),
                                   ),
@@ -976,22 +1033,24 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               itemCount: chatProvider.sessions.length,
                               itemBuilder: (context, index) {
                                 final session = chatProvider.sessions[index];
-                                final isSelected =
-                                    chatProvider.currentSession?['session_id'] ==
-                                        session['session_id'];
+                                final isSelected = chatProvider
+                                        .currentSession?['session_id'] ==
+                                    session['session_id'];
 
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 4),
                                   decoration: BoxDecoration(
                                     color: isSelected
-                                        ? (isDark 
-                                            ? const Color(0xFF00FFFF).withOpacity(0.1)
-                                            : const Color(0xFF0088CC).withOpacity(0.1))
+                                        ? (isDark
+                                            ? const Color(0xFF00FFFF)
+                                                .withOpacity(0.1)
+                                            : const Color(0xFF0088CC)
+                                                .withOpacity(0.1))
                                         : null,
                                     borderRadius: BorderRadius.circular(12),
                                     border: isSelected
                                         ? Border.all(
-                                            color: isDark 
+                                            color: isDark
                                                 ? const Color(0xFF00FFFF)
                                                 : const Color(0xFF0088CC),
                                             width: 0.5,
@@ -1003,11 +1062,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? (isDark 
+                                            ? (isDark
                                                 ? const Color(0xFF00FFFF)
                                                 : const Color(0xFF0088CC))
-                                            : (isDark 
-                                                ? const Color(0xFF8888AA).withOpacity(0.2)
+                                            : (isDark
+                                                ? const Color(0xFF8888AA)
+                                                    .withOpacity(0.2)
                                                 : Colors.grey.shade200),
                                         shape: BoxShape.circle,
                                       ),
@@ -1015,10 +1075,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                         Icons.chat,
                                         size: 16,
                                         color: isSelected
-                                            ? (isDark 
+                                            ? (isDark
                                                 ? const Color(0xFF0A0A0F)
                                                 : Colors.white)
-                                            : (isDark 
+                                            : (isDark
                                                 ? const Color(0xFF00FFFF)
                                                 : const Color(0xFF0088CC)),
                                       ),
@@ -1031,10 +1091,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                             : FontWeight.normal,
                                         fontSize: 14,
                                         color: isSelected
-                                            ? (isDark 
+                                            ? (isDark
                                                 ? const Color(0xFF00FFFF)
                                                 : const Color(0xFF0088CC))
-                                            : (isDark 
+                                            : (isDark
                                                 ? const Color(0xFFE0E0FF)
                                                 : Colors.black87),
                                       ),
@@ -1045,8 +1105,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                       '${session['message_count']} pesan',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: isDark 
-                                            ? const Color(0xFF8888AA).withOpacity(0.8)
+                                        color: isDark
+                                            ? const Color(0xFF8888AA)
+                                                .withOpacity(0.8)
                                             : Colors.grey.shade600,
                                       ),
                                     ),
@@ -1055,10 +1116,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                         Icons.delete_outline,
                                         size: 18,
                                         color: isSelected
-                                            ? (isDark 
+                                            ? (isDark
                                                 ? const Color(0xFFFF44AA)
                                                 : Colors.red)
-                                            : (isDark 
+                                            : (isDark
                                                 ? const Color(0xFF8888AA)
                                                 : Colors.grey.shade500),
                                       ),
@@ -1066,7 +1127,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                           _deleteSession(session['session_id']),
                                     ),
                                     onTap: () {
-                                      chatProvider.loadSession(session['session_id']);
+                                      chatProvider
+                                          .loadSession(session['session_id']);
                                       Navigator.pop(context);
                                     },
                                   ),
@@ -1092,7 +1154,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark 
+                      backgroundColor: isDark
                           ? const Color(0xFF00FFFF)
                           : const Color(0xFF0088CC),
                       minimumSize: const Size(double.infinity, 45),
@@ -1100,16 +1162,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 4,
-                      shadowColor: (isDark 
-                          ? const Color(0xFF00FFFF)
-                          : const Color(0xFF0088CC)).withOpacity(0.5),
+                      shadowColor: (isDark
+                              ? const Color(0xFF00FFFF)
+                              : const Color(0xFF0088CC))
+                          .withOpacity(0.5),
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -1127,11 +1189,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       ? Center(
                           child: CircularProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                              isDark
+                                  ? const Color(0xFF00FFFF)
+                                  : const Color(0xFF0088CC),
                             ),
                           ),
                         )
-                      : chatProvider.messages.isEmpty && !chatProvider.isThinking
+                      : chatProvider.messages.isEmpty &&
+                              !chatProvider.isThinking
                           ? _buildWelcome(userName)
                           : ListView.builder(
                               controller: _scrollController,
@@ -1147,18 +1212,23 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                 final msgIndex =
                                     chatProvider.isThinking ? index - 1 : index;
                                 final message = chatProvider.messages[
-                                    chatProvider.messages.length - 1 - msgIndex];
+                                    chatProvider.messages.length -
+                                        1 -
+                                        msgIndex];
                                 return _buildBubble(message);
                               },
                             ),
                 ),
                 if (chatProvider.isSending)
                   LinearProgressIndicator(
-                    backgroundColor: (isDark 
-                        ? const Color(0xFF00FFFF)
-                        : const Color(0xFF0088CC)).withOpacity(0.1),
+                    backgroundColor: (isDark
+                            ? const Color(0xFF00FFFF)
+                            : const Color(0xFF0088CC))
+                        .withOpacity(0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                      isDark
+                          ? const Color(0xFF00FFFF)
+                          : const Color(0xFF0088CC),
                     ),
                   ),
                 Container(
@@ -1167,7 +1237,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     color: isDark ? const Color(0xFF050507) : Colors.white,
                     border: Border(
                       top: BorderSide(
-                        color: (isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC))
+                        color: (isDark
+                                ? const Color(0xFF00FFFF)
+                                : const Color(0xFF0088CC))
                             .withOpacity(0.3),
                       ),
                     ),
@@ -1179,7 +1251,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       IconButton(
                         icon: Icon(
                           Icons.attach_file,
-                          color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                          color: isDark
+                              ? const Color(0xFF00FFFF)
+                              : const Color(0xFF0088CC),
                           size: 24,
                         ),
                         onPressed: _showAttachmentMenu,
@@ -1190,7 +1264,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       IconButton(
                         icon: Icon(
                           Icons.mic_rounded,
-                          color: isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                          color: isDark
+                              ? const Color(0xFF00FFFF)
+                              : const Color(0xFF0088CC),
                           size: 24,
                         ),
                         onPressed: () async {
@@ -1202,7 +1278,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           );
                           if (result != null && result.isNotEmpty) {
                             _messageController.text = result;
-                            _onSend(); 
+                            _onSend();
                           }
                         },
                         tooltip: 'Kirim pesan suara',
@@ -1217,21 +1293,23 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           minLines: 1,
                           enabled: !chatProvider.isSending,
                           style: TextStyle(
-                            color: isDark ? const Color(0xFFE0E0FF) : Colors.black87,
+                            color: isDark
+                                ? const Color(0xFFE0E0FF)
+                                : Colors.black87,
                           ),
                           decoration: InputDecoration(
                             hintText: chatProvider.isSending
                                 ? 'Menunggu balasan...'
                                 : 'Tulis pesan...',
                             hintStyle: TextStyle(
-                              color: isDark 
+                              color: isDark
                                   ? const Color(0xFF8888AA).withOpacity(0.5)
                                   : Colors.grey.shade500,
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide(
-                                color: isDark 
+                                color: isDark
                                     ? const Color(0xFF00FFFF)
                                     : const Color(0xFF0088CC),
                                 width: 0.5,
@@ -1240,23 +1318,24 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide(
-                                color: (isDark 
-                                    ? const Color(0xFF00FFFF)
-                                    : const Color(0xFF0088CC)).withOpacity(0.3),
+                                color: (isDark
+                                        ? const Color(0xFF00FFFF)
+                                        : const Color(0xFF0088CC))
+                                    .withOpacity(0.3),
                                 width: 0.5,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(24),
                               borderSide: BorderSide(
-                                color: isDark 
+                                color: isDark
                                     ? const Color(0xFF00FFFF)
                                     : const Color(0xFF0088CC),
                                 width: 1.5,
                               ),
                             ),
                             filled: true,
-                            fillColor: isDark 
+                            fillColor: isDark
                                 ? const Color(0xFF0A0A0F)
                                 : Colors.grey.shade100,
                             contentPadding: const EdgeInsets.symmetric(
@@ -1273,14 +1352,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color: (isDark 
-                                ? const Color(0xFF00FFFF)
-                                : const Color(0xFF0088CC)).withOpacity(0.1),
+                            color: (isDark
+                                    ? const Color(0xFF00FFFF)
+                                    : const Color(0xFF0088CC))
+                                .withOpacity(0.1),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: (isDark 
-                                  ? const Color(0xFF00FFFF)
-                                  : const Color(0xFF0088CC)).withOpacity(0.3),
+                              color: (isDark
+                                      ? const Color(0xFF00FFFF)
+                                      : const Color(0xFF0088CC))
+                                  .withOpacity(0.3),
                               width: 1,
                             ),
                           ),
@@ -1290,7 +1371,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               height: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Color(0xFF00FFFF)),
                               ),
                             ),
                           ),
@@ -1303,17 +1385,22 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               decoration: BoxDecoration(
                                 gradient: RadialGradient(
                                   colors: [
-                                    isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
-                                    isDark ? const Color(0xFF00FFFF) : const Color(0xFF0088CC),
+                                    isDark
+                                        ? const Color(0xFF00FFFF)
+                                        : const Color(0xFF0088CC),
+                                    isDark
+                                        ? const Color(0xFF00FFFF)
+                                        : const Color(0xFF0088CC),
                                   ],
                                 ),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isDark 
-                                        ? const Color(0xFF00FFFF)
-                                        : const Color(0xFF0088CC))
-                                        .withOpacity(_glowAnimation.value * 0.5),
+                                    color: (isDark
+                                            ? const Color(0xFF00FFFF)
+                                            : const Color(0xFF0088CC))
+                                        .withOpacity(
+                                            _glowAnimation.value * 0.5),
                                     blurRadius: 15,
                                     spreadRadius: 2,
                                   ),
@@ -1322,7 +1409,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               child: IconButton(
                                 icon: Icon(
                                   Icons.send,
-                                  color: isDark ? const Color(0xFF0A0A0F) : Colors.white,
+                                  color: isDark
+                                      ? const Color(0xFF0A0A0F)
+                                      : Colors.white,
                                 ),
                                 onPressed: _onSend,
                               ),
@@ -1343,9 +1432,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   String _formatTablesForMobile(String text) {
     // Simple check - if has table markers, add note
     if (text.contains('|') && text.contains('-|-')) {
-      return '💡 _Tip: Untuk melihat data lebih jelas, scroll horizontal pada tabel_\n\n' + text;
+      return '💡 _Tip: Untuk melihat data lebih jelas, scroll horizontal pada tabel_\n\n' +
+          text;
     }
     return text;
   }
-
 }

@@ -31,12 +31,14 @@ class ChatMessage {
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      content: (json['content'] ?? json['message'] ?? json['text'] ?? '').toString(),
+      content:
+          (json['content'] ?? json['message'] ?? json['text'] ?? '').toString(),
       role: (json['role'] ?? 'assistant').toString(),
       timestamp: json['timestamp'] != null
           ? DateTime.tryParse(json['timestamp'].toString()) ?? DateTime.now()
           : json['created_at'] != null
-              ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
+              ? DateTime.tryParse(json['created_at'].toString()) ??
+                  DateTime.now()
               : DateTime.now(),
     );
   }

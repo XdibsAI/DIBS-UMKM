@@ -9,7 +9,6 @@ class PrinterSetupScreen extends StatefulWidget {
 }
 
 class _PrinterSetupScreenState extends State<PrinterSetupScreen> {
-
   List devices = [];
 
   @override

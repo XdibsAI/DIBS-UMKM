@@ -8,7 +8,8 @@ import 'printer_setup_screen.dart';
 class QrisPaymentScreen extends StatefulWidget {
   final int totalAmount;
   final List<Map<String, dynamic>> cartItems;
-  final Future<Map<String, dynamic>> Function(String paymentMethod) onPaymentConfirmed;
+  final Future<Map<String, dynamic>> Function(String paymentMethod)
+      onPaymentConfirmed;
 
   const QrisPaymentScreen({
     super.key,
@@ -95,7 +96,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
       }
 
       final fileName = rawPath.split('/').last;
-      final publicUrl = '${ApiConfig.baseUrl.replaceFirst('/api/v1', '')}/uploads/$fileName';
+      final publicUrl =
+          '${ApiConfig.baseUrl.replaceFirst('/api/v1', '')}/uploads/$fileName';
 
       final saveRes = await ApiService.saveTokoPaymentSettings({
         'qris_image_url': publicUrl,
@@ -177,7 +179,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
   Future<void> _showReceiptDialog(String paymentMethod, String? saleId) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade700;
+    final secondaryTextColor =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade700;
     final surfaceColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
 
     await showDialog(
@@ -195,7 +198,9 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (saleId != null && saleId.isNotEmpty)
-                  Text('ID Transaksi: $saleId', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                  Text('ID Transaksi: $saleId',
+                      style:
+                          TextStyle(color: secondaryTextColor, fontSize: 12)),
                 const SizedBox(height: 8),
                 Text(
                   'Metode: ${paymentMethod == 'qris' ? 'QRIS' : 'Transfer'}',
@@ -215,7 +220,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                           ),
                           Text(
                             'Rp ${item['subtotal'] ?? 0}',
-                            style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                                color: textColor, fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -224,7 +230,9 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                    Text('Total',
+                        style: TextStyle(
+                            color: textColor, fontWeight: FontWeight.bold)),
                     Text(
                       'Rp ${widget.totalAmount}',
                       style: const TextStyle(
@@ -299,7 +307,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
   }
 
   Future<void> _finishPayment() async {
-    if (_selectedMethod == 'qris' && (_qrisImageUrl == null || _qrisImageUrl!.isEmpty)) {
+    if (_selectedMethod == 'qris' &&
+        (_qrisImageUrl == null || _qrisImageUrl!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Upload QRIS dulu'),
@@ -359,7 +368,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
     final bgColor = isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF5F5F5);
     final surfaceColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade700;
+    final secondaryTextColor =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade700;
     const accentColor = Color(0xFF00FFFF);
 
     return Scaffold(
@@ -414,7 +424,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                             child: RadioListTile<String>(
                               value: 'qris',
                               groupValue: _selectedMethod,
-                              onChanged: (_) => setState(() => _selectedMethod = 'qris'),
+                              onChanged: (_) =>
+                                  setState(() => _selectedMethod = 'qris'),
                               title: const Text('QRIS'),
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -423,7 +434,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                             child: RadioListTile<String>(
                               value: 'transfer',
                               groupValue: _selectedMethod,
-                              onChanged: (_) => setState(() => _selectedMethod = 'transfer'),
+                              onChanged: (_) =>
+                                  setState(() => _selectedMethod = 'transfer'),
                               title: const Text('Transfer'),
                               contentPadding: EdgeInsets.zero,
                             ),
@@ -444,10 +456,13 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                   color: surfaceColor,
                                   borderRadius: BorderRadius.circular(16),
                                 ),
-                                child: _qrisImageUrl == null || _qrisImageUrl!.isEmpty
+                                child: _qrisImageUrl == null ||
+                                        _qrisImageUrl!.isEmpty
                                     ? Column(
                                         children: [
-                                          Icon(Icons.qr_code_2, size: 80, color: secondaryTextColor),
+                                          Icon(Icons.qr_code_2,
+                                              size: 80,
+                                              color: secondaryTextColor),
                                           const SizedBox(height: 12),
                                           Text(
                                             'QRIS belum diatur',
@@ -461,22 +476,28 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                           Text(
                                             'Upload QRIS milik penjual agar pembeli bisa scan.',
                                             textAlign: TextAlign.center,
-                                            style: TextStyle(color: secondaryTextColor),
+                                            style: TextStyle(
+                                                color: secondaryTextColor),
                                           ),
                                           const SizedBox(height: 16),
                                           ElevatedButton.icon(
-                                            onPressed: _isUploading ? null : _uploadQrisImage,
+                                            onPressed: _isUploading
+                                                ? null
+                                                : _uploadQrisImage,
                                             icon: _isUploading
                                                 ? const SizedBox(
                                                     width: 18,
                                                     height: 18,
-                                                    child: CircularProgressIndicator(
+                                                    child:
+                                                        CircularProgressIndicator(
                                                       strokeWidth: 2,
                                                       color: Colors.black,
                                                     ),
                                                   )
                                                 : const Icon(Icons.upload_file),
-                                            label: Text(_isUploading ? 'Uploading...' : 'Upload QRIS'),
+                                            label: Text(_isUploading
+                                                ? 'Uploading...'
+                                                : 'Upload QRIS'),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: accentColor,
                                               foregroundColor: Colors.black,
@@ -487,16 +508,21 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                     : Column(
                                         children: [
                                           ClipRRect(
-                                            borderRadius: BorderRadius.circular(16),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
                                             child: Image.network(
                                               _qrisImageUrl!,
                                               height: 320,
                                               fit: BoxFit.contain,
-                                              errorBuilder: (_, __, ___) => Padding(
-                                                padding: const EdgeInsets.all(32),
+                                              errorBuilder: (_, __, ___) =>
+                                                  Padding(
+                                                padding:
+                                                    const EdgeInsets.all(32),
                                                 child: Text(
                                                   'Gagal memuat gambar QRIS',
-                                                  style: TextStyle(color: secondaryTextColor),
+                                                  style: TextStyle(
+                                                      color:
+                                                          secondaryTextColor),
                                                 ),
                                               ),
                                             ),
@@ -504,11 +530,14 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                           const SizedBox(height: 12),
                                           Text(
                                             'Minta pembeli scan QRIS di atas',
-                                            style: TextStyle(color: secondaryTextColor),
+                                            style: TextStyle(
+                                                color: secondaryTextColor),
                                           ),
                                           const SizedBox(height: 12),
                                           OutlinedButton.icon(
-                                            onPressed: _isUploading ? null : _uploadQrisImage,
+                                            onPressed: _isUploading
+                                                ? null
+                                                : _uploadQrisImage,
                                             icon: const Icon(Icons.edit),
                                             label: const Text('Ganti QRIS'),
                                           ),
@@ -553,18 +582,23 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton.icon(
-                                        onPressed: _isSavingBank ? null : _saveBankSettings,
+                                        onPressed: _isSavingBank
+                                            ? null
+                                            : _saveBankSettings,
                                         icon: _isSavingBank
                                             ? const SizedBox(
                                                 width: 18,
                                                 height: 18,
-                                                child: CircularProgressIndicator(
+                                                child:
+                                                    CircularProgressIndicator(
                                                   strokeWidth: 2,
                                                   color: Colors.black,
                                                 ),
                                               )
                                             : const Icon(Icons.save),
-                                        label: Text(_isSavingBank ? 'Menyimpan...' : 'Simpan Rekening'),
+                                        label: Text(_isSavingBank
+                                            ? 'Menyimpan...'
+                                            : 'Simpan Rekening'),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: accentColor,
                                           foregroundColor: Colors.black,
@@ -586,7 +620,8 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                                       const SizedBox(height: 4),
                                       Text(
                                         _accountNameController.text.trim(),
-                                        style: TextStyle(color: secondaryTextColor),
+                                        style: TextStyle(
+                                            color: secondaryTextColor),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
@@ -610,7 +645,9 @@ class _QrisPaymentScreenState extends State<QrisPaymentScreen> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _isFinishing ? null : () => Navigator.pop(context),
+                            onPressed: _isFinishing
+                                ? null
+                                : () => Navigator.pop(context),
                             child: const Text('Batal'),
                           ),
                         ),

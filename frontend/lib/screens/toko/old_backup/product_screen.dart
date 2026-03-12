@@ -57,17 +57,21 @@ class _ProductScreenState extends State<ProductScreen> {
                 style: const TextStyle(color: Color(0xFFE0E0FF)),
                 decoration: InputDecoration(
                   hintText: 'Cari produk...',
-                  hintStyle: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.5)),
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF00FFFF)),
+                  hintStyle: TextStyle(
+                      color: const Color(0xFF8888AA).withOpacity(0.5)),
+                  prefixIcon:
+                      const Icon(Icons.search, color: Color(0xFF00FFFF)),
                   filled: true,
                   fillColor: const Color(0xFF12121A),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -85,7 +89,8 @@ class _ProductScreenState extends State<ProductScreen> {
               child: toko.isLoading
                   ? const Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
                       ),
                     )
                   : toko.products.isEmpty
@@ -166,7 +171,7 @@ class _ProductScreenState extends State<ProductScreen> {
 
   Widget _buildProductCard(Map<String, dynamic> product) {
     final isLowStock = product['stock'] <= (product['min_stock'] ?? 0);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -177,7 +182,7 @@ class _ProductScreenState extends State<ProductScreen> {
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLowStock 
+          color: isLowStock
               ? Colors.red.withOpacity(0.3)
               : const Color(0xFF00FFFF).withOpacity(0.3),
           width: 1,
@@ -227,14 +232,15 @@ class _ProductScreenState extends State<ProductScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: isLowStock 
+                    color: isLowStock
                         ? Colors.red.withOpacity(0.15)
                         : const Color(0xFF00FFFF).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isLowStock 
+                      color: isLowStock
                           ? Colors.red.withOpacity(0.3)
                           : const Color(0xFF00FFFF).withOpacity(0.3),
                     ),
@@ -273,7 +279,8 @@ class _ProductScreenState extends State<ProductScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit, color: Color(0xFF00FFFF)),
-                  onPressed: () => _showProductDialog(context, product: product),
+                  onPressed: () =>
+                      _showProductDialog(context, product: product),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -317,7 +324,8 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  void _showProductDialog(BuildContext context, {Map<String, dynamic>? product}) {
+  void _showProductDialog(BuildContext context,
+      {Map<String, dynamic>? product}) {
     final isEditing = product != null;
     final nameController = TextEditingController(text: product?['name']);
     final priceController = TextEditingController(
@@ -329,7 +337,8 @@ class _ProductScreenState extends State<ProductScreen> {
     final minStockController = TextEditingController(
       text: product?['min_stock']?.toString() ?? '0',
     );
-    final categoryController = TextEditingController(text: product?['category']);
+    final categoryController =
+        TextEditingController(text: product?['category']);
     final barcodeController = TextEditingController(text: product?['barcode']);
 
     showDialog(
@@ -357,7 +366,8 @@ class _ProductScreenState extends State<ProductScreen> {
                   fillColor: const Color(0xFF050507),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -374,7 +384,8 @@ class _ProductScreenState extends State<ProductScreen> {
                   fillColor: const Color(0xFF050507),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -393,7 +404,8 @@ class _ProductScreenState extends State<ProductScreen> {
                         fillColor: const Color(0xFF050507),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                          borderSide: BorderSide(
+                              color: const Color(0xFF00FFFF).withOpacity(0.3)),
                         ),
                       ),
                     ),
@@ -411,7 +423,8 @@ class _ProductScreenState extends State<ProductScreen> {
                         fillColor: const Color(0xFF050507),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                          borderSide: BorderSide(
+                              color: const Color(0xFF00FFFF).withOpacity(0.3)),
                         ),
                       ),
                     ),
@@ -429,7 +442,8 @@ class _ProductScreenState extends State<ProductScreen> {
                   fillColor: const Color(0xFF050507),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -444,7 +458,8 @@ class _ProductScreenState extends State<ProductScreen> {
                   fillColor: const Color(0xFF050507),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3)),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3)),
                   ),
                 ),
               ),
@@ -458,23 +473,28 @@ class _ProductScreenState extends State<ProductScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL', style: TextStyle(color: Color(0xFF8888AA))),
+            child:
+                const Text('BATAL', style: TextStyle(color: Color(0xFF8888AA))),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              
+
               final data = {
                 'name': nameController.text,
                 'price': double.tryParse(priceController.text) ?? 0,
                 'stock': int.tryParse(stockController.text) ?? 0,
                 'min_stock': int.tryParse(minStockController.text) ?? 0,
-                'category': categoryController.text.isEmpty ? null : categoryController.text,
-                'barcode': barcodeController.text.isEmpty ? null : barcodeController.text,
+                'category': categoryController.text.isEmpty
+                    ? null
+                    : categoryController.text,
+                'barcode': barcodeController.text.isEmpty
+                    ? null
+                    : barcodeController.text,
               };
 
               final toko = Provider.of<TokoProvider>(context, listen: false);
-              
+
               bool success;
               if (isEditing) {
                 success = await toko.updateProduct(product!['id'], data);
@@ -486,7 +506,9 @@ class _ProductScreenState extends State<ProductScreen> {
               if (success && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(isEditing ? '✅ Produk diupdate' : '✅ Produk ditambahkan'),
+                    content: Text(isEditing
+                        ? '✅ Produk diupdate'
+                        : '✅ Produk ditambahkan'),
                     backgroundColor: const Color(0xFF12121A),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -504,7 +526,8 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  void _deleteProduct(BuildContext context, Map<String, dynamic> product) async {
+  void _deleteProduct(
+      BuildContext context, Map<String, dynamic> product) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -524,11 +547,13 @@ class _ProductScreenState extends State<ProductScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('BATAL', style: TextStyle(color: Color(0xFF8888AA))),
+            child:
+                const Text('BATAL', style: TextStyle(color: Color(0xFF8888AA))),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFFF44AA)),
+            style:
+                TextButton.styleFrom(foregroundColor: const Color(0xFFFF44AA)),
             child: const Text('HAPUS'),
           ),
         ],
@@ -538,7 +563,7 @@ class _ProductScreenState extends State<ProductScreen> {
     if (confirm == true) {
       final toko = Provider.of<TokoProvider>(context, listen: false);
       final success = await toko.deleteProduct(product['id']);
-      
+
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

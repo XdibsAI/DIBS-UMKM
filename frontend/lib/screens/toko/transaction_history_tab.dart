@@ -66,13 +66,15 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
   Future<void> _showDetail(Map<String, dynamic> sale) async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade700;
+    final secondaryTextColor =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade700;
     final surfaceColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
 
     final items = _parseItems(sale['items']);
-    final paymentMethod = (sale['payment_method']?.toString().trim().isNotEmpty ?? false)
-        ? sale['payment_method'].toString()
-        : 'cash';
+    final paymentMethod =
+        (sale['payment_method']?.toString().trim().isNotEmpty ?? false)
+            ? sale['payment_method'].toString()
+            : 'cash';
 
     await showDialog(
       context: context,
@@ -86,9 +88,11 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('ID: ${sale['id'] ?? '-'}', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+                Text('ID: ${sale['id'] ?? '-'}',
+                    style: TextStyle(color: secondaryTextColor, fontSize: 12)),
                 const SizedBox(height: 4),
-                Text('Tanggal: ${_fmtDate(sale['created_at'])}', style: TextStyle(color: secondaryTextColor)),
+                Text('Tanggal: ${_fmtDate(sale['created_at'])}',
+                    style: TextStyle(color: secondaryTextColor)),
                 const SizedBox(height: 4),
                 Text(
                   'Metode: ${paymentMethod == 'qris' ? 'QRIS' : paymentMethod == 'transfer' ? 'Transfer' : 'Cash'}',
@@ -98,7 +102,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
                 ...items.map((item) {
                   final qty = _toInt(item['qty'] ?? item['quantity']);
                   final price = _toInt(item['price']);
-                  final subtotal = _toInt(item['subtotal']) == 0 ? qty * price : _toInt(item['subtotal']);
+                  final subtotal = _toInt(item['subtotal']) == 0
+                      ? qty * price
+                      : _toInt(item['subtotal']);
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -113,7 +119,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
                         ),
                         Text(
                           'Rp ${_fmt(subtotal)}',
-                          style: TextStyle(color: textColor, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              color: textColor, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -123,7 +130,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Total', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+                    Text('Total',
+                        style: TextStyle(
+                            color: textColor, fontWeight: FontWeight.bold)),
                     Text(
                       'Rp ${_fmt(_toInt(sale['total']))}',
                       style: const TextStyle(
@@ -154,7 +163,9 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
                 final printableItems = items.map((e) {
                   final qty = _toInt(e['qty'] ?? e['quantity']);
                   final price = _toInt(e['price']);
-                  final subtotal = _toInt(e['subtotal']) == 0 ? qty * price : _toInt(e['subtotal']);
+                  final subtotal = _toInt(e['subtotal']) == 0
+                      ? qty * price
+                      : _toInt(e['subtotal']);
                   return {
                     'name': e['name'] ?? 'Produk',
                     'quantity': qty,
@@ -208,7 +219,8 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
     final bgColor = isDark ? const Color(0xFF0A0A0F) : const Color(0xFFF5F5F5);
     final surfaceColor = isDark ? const Color(0xFF1A1A2E) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
-    final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey.shade700;
+    final secondaryTextColor =
+        isDark ? Colors.grey.shade400 : Colors.grey.shade700;
     const accentColor = Color(0xFF00FFFF);
 
     if (provider.isLoading && history.isEmpty) {
@@ -235,9 +247,10 @@ class _TransactionHistoryTabState extends State<TransactionHistoryTab> {
         itemBuilder: (_, i) {
           final sale = history[i];
           final total = _toInt(sale['total']);
-          final paymentMethod = (sale['payment_method']?.toString().trim().isNotEmpty ?? false)
-              ? sale['payment_method'].toString()
-              : 'cash';
+          final paymentMethod =
+              (sale['payment_method']?.toString().trim().isNotEmpty ?? false)
+                  ? sale['payment_method'].toString()
+                  : 'cash';
 
           return Container(
             margin: const EdgeInsets.only(bottom: 12),

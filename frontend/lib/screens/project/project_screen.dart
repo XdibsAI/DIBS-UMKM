@@ -1,5 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'video_studio_screen.dart';
+import 'video_projects_screen.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -89,7 +90,7 @@ class VideoProjectsTab extends StatelessWidget {
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const VideoStudioScreen(),
+                  builder: (_) => const VideoProjectsScreen(),
                 ),
               ),
               icon: const Icon(Icons.add),
@@ -149,7 +150,7 @@ class VideoProjectCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12)),
                   child: Text(status.toUpperCase(),
                       style: TextStyle(
@@ -555,7 +556,7 @@ class KnowledgeCard extends StatelessWidget {
               children: [
                 Chip(
                   label: Text(category.toString()),
-                  backgroundColor: color.withOpacity(0.12),
+                  backgroundColor: color.withValues(alpha: 0.12),
                   labelStyle:
                       TextStyle(color: color, fontWeight: FontWeight.w600),
                 ),
@@ -736,7 +737,8 @@ Future<void> _downloadVideo(BuildContext context, String projectId) async {
         children: [
           CircularProgressIndicator(),
           SizedBox(height: 16),
-          Text('Downloading video...', style: TextStyle(color: Colors.white)),
+          Text('Sedang menyimpan video ke Download/DIBS_Videos...',
+              style: TextStyle(color: Colors.white)),
         ],
       ),
     ),
@@ -751,25 +753,27 @@ Future<void> _downloadVideo(BuildContext context, String projectId) async {
     if (videoPath != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Video tersimpan: $videoPath'),
-          duration: const Duration(seconds: 3),
-          action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {},
-          ),
+          content: Text('Video tersimpan di: $videoPath'),
+          duration: const Duration(seconds: 4),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Gagal download video'), backgroundColor: Colors.red),
+          content: Text('Gagal simpan video'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   } catch (e) {
     if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Gagal simpan video: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }

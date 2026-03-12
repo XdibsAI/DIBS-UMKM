@@ -12,34 +12,37 @@ class DibsTheme {
   // ============================================================================
 
   // Dark Mode Colors
-  static const Color backgroundDark = Color(0xFF0A0A0F);      // Dark background utama
-  static const Color surfaceDark = Color(0xFF12121A);         // Surface untuk cards
-  static const Color surfaceDarkElevated = Color(0xFF1E1E2A); // Surface lebih terang
-  static const Color borderDark = Color(0xFF2A2A3A);          // Border subtle
+  static const Color backgroundDark =
+      Color(0xFF0A0A0F); // Dark background utama
+  static const Color surfaceDark = Color(0xFF12121A); // Surface untuk cards
+  static const Color surfaceDarkElevated =
+      Color(0xFF1E1E2A); // Surface lebih terang
+  static const Color borderDark = Color(0xFF2A2A3A); // Border subtle
 
   // Light Mode Colors
-  static const Color backgroundLight = Color(0xFFF8F9FF);     // Light background
-  static const Color surfaceLight = Color(0xFFFFFFFF);        // White surface
-  static const Color surfaceLightElevated = Color(0xFFF0F0F8); // Elevated surface
-  static const Color borderLight = Color(0xFFE0E0F0);         // Border subtle
+  static const Color backgroundLight = Color(0xFFF8F9FF); // Light background
+  static const Color surfaceLight = Color(0xFFFFFFFF); // White surface
+  static const Color surfaceLightElevated =
+      Color(0xFFF0F0F8); // Elevated surface
+  static const Color borderLight = Color(0xFFE0E0F0); // Border subtle
 
   // Accent Colors - Neon (konsisten di kedua mode)
-  static const Color accentCyan = Color(0xFF00FFFF);          // Primary accent
-  static const Color accentPink = Color(0xFFFF44AA);          // Secondary accent
-  static const Color accentPurple = Color(0xFF9D4DFF);        // Tertiary accent
-  static const Color accentMint = Color(0xFF00FFAA);          // Success accent
+  static const Color accentCyan = Color(0xFF00FFFF); // Primary accent
+  static const Color accentPink = Color(0xFFFF44AA); // Secondary accent
+  static const Color accentPurple = Color(0xFF9D4DFF); // Tertiary accent
+  static const Color accentMint = Color(0xFF00FFAA); // Success accent
 
   // Text Colors - Dark Mode
-  static const Color textPrimaryDark = Color(0xFFE0E0FF);     // Teks utama
-  static const Color textSecondaryDark = Color(0xFF8888AA);   // Teks sekunder
-  static const Color textHintDark = Color(0xFF666688);        // Hint text
-  static const Color textDisabledDark = Color(0xFF444466);    // Disabled text
+  static const Color textPrimaryDark = Color(0xFFE0E0FF); // Teks utama
+  static const Color textSecondaryDark = Color(0xFF8888AA); // Teks sekunder
+  static const Color textHintDark = Color(0xFF666688); // Hint text
+  static const Color textDisabledDark = Color(0xFF444466); // Disabled text
 
   // Text Colors - Light Mode
-  static const Color textPrimaryLight = Color(0xFF1A1A2E);    // Teks utama
-  static const Color textSecondaryLight = Color(0xFF666680);  // Teks sekunder
-  static const Color textHintLight = Color(0xFF9999B0);       // Hint text
-  static const Color textDisabledLight = Color(0xFFCCCCDD);   // Disabled text
+  static const Color textPrimaryLight = Color(0xFF1A1A2E); // Teks utama
+  static const Color textSecondaryLight = Color(0xFF666680); // Teks sekunder
+  static const Color textHintLight = Color(0xFF9999B0); // Hint text
+  static const Color textDisabledLight = Color(0xFFCCCCDD); // Disabled text
 
   // Status Colors
   static const Color success = Color(0xFF00C853);
@@ -223,7 +226,8 @@ class DibsTheme {
   // ============================================================================
   // SHAPE CONFIGURATIONS - Reusable shapes
   // ============================================================================
-  static ShapeDecoration cardShape({required Color borderColor, required Color surfaceColor}) {
+  static ShapeDecoration cardShape(
+      {required Color borderColor, required Color surfaceColor}) {
     return ShapeDecoration(
       color: surfaceColor,
       shape: RoundedRectangleBorder(
@@ -328,7 +332,8 @@ class DibsTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceDark,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: BorderSide(color: accentCyan.withOpacity(0.5)),
@@ -465,7 +470,8 @@ class DibsTheme {
         secondarySelectedColor: accentPink,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         labelStyle: const TextStyle(color: textPrimaryDark, fontSize: 12),
-        secondaryLabelStyle: const TextStyle(color: backgroundDark, fontSize: 12),
+        secondaryLabelStyle:
+            const TextStyle(color: backgroundDark, fontSize: 12),
         brightness: Brightness.dark,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSm),
@@ -577,7 +583,8 @@ class DibsTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surfaceLight,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
           borderSide: BorderSide(color: accentCyan.withOpacity(0.5)),
@@ -750,7 +757,8 @@ class DibsTheme {
   // ============================================================================
 
   /// Mendapatkan warna berdasarkan mode (dark/light)
-  static Color adaptiveColor(BuildContext context, {
+  static Color adaptiveColor(
+    BuildContext context, {
     required Color dark,
     required Color light,
   }) {
@@ -782,7 +790,7 @@ extension ThemeContextExtension on BuildContext {
   TextTheme get textTheme => theme.textTheme;
   ColorScheme get colorScheme => theme.colorScheme;
   bool get isDarkMode => theme.brightness == Brightness.dark;
-  
+
   // Adaptive colors dari DibsTheme
   Color get accentCyan => DibsTheme.accentCyan;
   Color get accentPink => DibsTheme.accentPink;

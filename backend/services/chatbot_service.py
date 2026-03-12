@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime
 from typing import Any, Dict, Optional, List
 
@@ -89,6 +90,42 @@ class ChatbotService:
             "status": row.get("status") or "open",
         }
 
+    def normalize_phone(self, phone: str) -> str:
+        raw = (phone or "").strip()
+        if not raw:
+            return ""
+        raw = re.sub(r"[^\d+]", "", raw)
+        if raw.startswith("+62"):
+            raw = "0" + raw[3:]
+        elif raw.startswith("62"):
+            raw = "0" + raw[2:]
+        return raw
+
+    async def find_customer_by_phone(self, user_id: str, phone: str) -> Optional[Dict[str, Any]]:
+        phone = self.normalize_phone(phone)
+        if not phone:
+            return None
+
+        rows = await self.db.fetch_all(
+            """
+            SELECT *
+            FROM customers
+            WHERE user_id = ?
+            ORDER BY id DESC
+            LIMIT 500
+            """,
+            (user_id,),
+        )
+
+        for row in rows:
+            item = dict(row)
+            db_phone = self.normalize_phone(item.get("phone") or "")
+            alt_phone = self.normalize_phone(item.get("alt_phone") or "") if "alt_phone" in item else ""
+            if phone and (phone == db_phone or phone == alt_phone):
+                return item
+
+        return None
+
     async def identify_contact(
         self,
         user_id: str,
@@ -99,6 +136,10 @@ class ChatbotService:
     ) -> Dict[str, Any]:
         await self.ensure_tables()
         now = datetime.now().isoformat()
+        norm_phone = self.normalize_phone(phone)
+
+        matched_customer = await self.find_customer_by_phone(user_id=user_id, phone=norm_phone)
+        matched_customer_id = matched_customer["id"] if matched_customer else None
 
         row = await self.db.fetch_one(
             """
@@ -111,31 +152,39 @@ class ChatbotService:
         )
 
         if row:
+            existing = dict(row)
+            customer_id = existing.get("customer_id") or matched_customer_id
+
             await self.db.execute(
                 """
                 UPDATE chat_contacts
                 SET display_name = COALESCE(NULLIF(?, ''), display_name),
                     phone = COALESCE(NULLIF(?, ''), phone),
+                    customer_id = COALESCE(?, customer_id),
                     updated_at = ?
                 WHERE id = ?
                 """,
-                (display_name, phone, now, dict(row)["id"]),
+                (display_name, norm_phone, customer_id, now, existing["id"]),
             )
-            row2 = await self.db.fetch_one("SELECT * FROM chat_contacts WHERE id = ?", (dict(row)["id"],))
+            row2 = await self.db.fetch_one(
+                "SELECT * FROM chat_contacts WHERE id = ?",
+                (existing["id"],),
+            )
             return self._contact_row(dict(row2))
 
         await self.db.execute(
             """
             INSERT INTO chat_contacts
-            (user_id, channel, external_id, display_name, phone, status, profile_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, channel, external_id, display_name, phone, customer_id, status, profile_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
                 channel,
                 external_id,
                 display_name,
-                phone,
+                norm_phone,
+                matched_customer_id,
                 "known",
                 "{}",
                 now,
@@ -166,15 +215,19 @@ class ChatbotService:
         )
 
         if row:
+            existing = dict(row)
             await self.db.execute(
                 """
                 UPDATE chatbot_sessions
                 SET last_message_at = ?
                 WHERE id = ?
                 """,
-                (now, dict(row)["id"]),
+                (now, existing["id"]),
             )
-            row2 = await self.db.fetch_one("SELECT * FROM chatbot_sessions WHERE id = ?", (dict(row)["id"],))
+            row2 = await self.db.fetch_one(
+                "SELECT * FROM chatbot_sessions WHERE id = ?",
+                (existing["id"],),
+            )
             return self._session_row(dict(row2))
 
         await self.db.execute(
@@ -280,12 +333,12 @@ class ChatbotService:
         drafts = []
 
         if contact.get("customer_id"):
-            customer = await self.db.fetch_one(
+            customer_row = await self.db.fetch_one(
                 "SELECT * FROM customers WHERE id = ? AND user_id = ?",
                 (contact["customer_id"], user_id),
             )
-            if customer:
-                customer = dict(customer)
+            if customer_row:
+                customer = dict(customer_row)
 
             task_rows = await self.db.fetch_all(
                 """
@@ -311,7 +364,11 @@ class ChatbotService:
         )
         drafts = [dict(r) for r in draft_rows]
 
-        recent_messages = await self.get_recent_messages(user_id=user_id, contact_id=contact_id, limit=10)
+        recent_messages = await self.get_recent_messages(
+            user_id=user_id,
+            contact_id=contact_id,
+            limit=10,
+        )
 
         return {
             "contact": contact,

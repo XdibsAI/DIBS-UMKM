@@ -3,9 +3,16 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
+  static String get baseOrigin {
+    final uri = Uri.parse(baseUrl);
+    final portPart = uri.hasPort ? ':${uri.port}' : '';
+    return '${uri.scheme}://${uri.host}$portPart';
+  }
+
   // API URL dari environment variable, fallback ke IP server untuk production
   static const String baseUrl = String.fromEnvironment(
     'API_URL',
@@ -24,12 +31,51 @@ class ApiConfig {
 }
 
 class ApiService {
-  static Future<Map<String, String>> _getHeaders() async {
+  static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token') ?? '';
+    final candidates = [
+      prefs.getString('token'),
+      prefs.getString('access_token'),
+      prefs.getString('auth_token'),
+      prefs.getString('jwt'),
+    ];
+
+    for (final item in candidates) {
+      if (item != null && item.trim().isNotEmpty) {
+        return item.trim();
+      }
+    }
+    return null;
+  }
+
+  static Future<bool> _requestStoragePermissionForDownload() async {
+    if (!Platform.isAndroid) return true;
+
+    final manage = await Permission.manageExternalStorage.request();
+    if (manage.isGranted) return true;
+
+    final media = await Permission.videos.request();
+    if (media.isGranted) return true;
+
+    final storage = await Permission.storage.request();
+    if (storage.isGranted) return true;
+
+    return false;
+  }
+
+  static Future<Directory> _ensurePublicVideoDir() async {
+    final dir = Directory('/storage/emulated/0/Download/DIBS_Videos');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  static Future<Map<String, String>> _getHeaders() async {
+    final token = await _getToken();
     return {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer $token',
+      'Authorization': 'Bearer ${token ?? ''}',
     };
   }
 
@@ -311,30 +357,81 @@ class ApiService {
   }
 
   static Future<String?> downloadVideo(String projectId) async {
-    try {
-      final headers = await _getHeaders();
-      final res = await http
-          .get(
-            Uri.parse('${ApiConfig.baseUrl}/video/download/$projectId'),
-            headers: headers,
-          )
-          .timeout(Duration(seconds: ApiConfig.videoTimeout));
-
-      if (res.statusCode == 200) {
-        final dir = Directory('/storage/emulated/0/Download/DIBS_Videos');
-        if (!await dir.exists()) await dir.create(recursive: true);
-
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
-        final file = File('${dir.path}/video_${projectId}_$timestamp.mp4');
-        await file.writeAsBytes(res.bodyBytes);
-
-        return file.path;
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Download video error: $e');
-      return null;
+    final ok = await _requestStoragePermissionForDownload();
+    if (!ok) {
+      throw Exception('Izin penyimpanan ditolak');
     }
+
+    final videoResponse = await getVideoStatus(projectId);
+    final data = Map<String, dynamic>.from(videoResponse['data'] ?? {});
+    final rawUrl =
+        data['download_url']?.toString() ?? data['video_url']?.toString() ?? '';
+
+    if (rawUrl.isEmpty) {
+      throw Exception('URL video tidak tersedia');
+    }
+
+    String finalUrl = rawUrl.trim();
+
+    final apiUri = Uri.parse(ApiConfig.baseUrl);
+    final origin =
+        '${apiUri.scheme}://${apiUri.host}${apiUri.hasPort ? ':${apiUri.port}' : ''}';
+
+    if (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) {
+      // pakai apa adanya
+    } else if (finalUrl.startsWith('/')) {
+      finalUrl = '$origin$finalUrl';
+    } else {
+      finalUrl = '${ApiConfig.baseUrl}/$finalUrl';
+    }
+
+    final dir = await _ensurePublicVideoDir();
+    final filePath = '${dir.path}/dibs_${projectId.substring(0, 8)}.mp4';
+
+    final token = await _getToken();
+    final headers = <String, String>{};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+
+    debugPrint('DOWNLOAD_RAW_URL: $rawUrl');
+    debugPrint('DOWNLOAD_FINAL_URL: $finalUrl');
+    debugPrint('DOWNLOAD_PATH: $filePath');
+
+    final response = await http.get(Uri.parse(finalUrl), headers: headers);
+
+    debugPrint('DOWNLOAD_STATUS: ${response.statusCode}');
+    debugPrint(
+        'DOWNLOAD_CONTENT_TYPE: ${response.headers['content-type'] ?? ''}');
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final preview = String.fromCharCodes(response.bodyBytes.take(200));
+      throw Exception('HTTP ${response.statusCode} | $preview');
+    }
+
+    final contentType = response.headers['content-type'] ?? '';
+    if (contentType.contains('application/json')) {
+      final preview = String.fromCharCodes(response.bodyBytes.take(200));
+      throw Exception('Server mengirim JSON, bukan file video | $preview');
+    }
+
+    final file = File(filePath);
+    await file.writeAsBytes(response.bodyBytes, flush: true);
+
+    final exists = await file.exists();
+    if (!exists) {
+      throw Exception('File gagal dibuat');
+    }
+
+    final size = await file.length();
+    debugPrint('DOWNLOADED_SIZE: $size');
+
+    if (size < 1024) {
+      final preview = String.fromCharCodes(response.bodyBytes.take(200));
+      throw Exception('File video tidak valid / terlalu kecil | $preview');
+    }
+
+    return filePath;
   }
 
   // ==================== TOKO MODULE ====================

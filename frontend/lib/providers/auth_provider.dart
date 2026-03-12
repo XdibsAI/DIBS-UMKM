@@ -6,10 +6,10 @@ import '../services/api_service.dart';
 class AuthProvider extends ChangeNotifier {
   User? _user;
   String? _token;
-  
+
   // Expose token for TokoProvider
   String? get token => _token;
-  
+
   // Expose token for TokoProvider
   bool _isLoading = false;
   bool _isInitializing = true;
@@ -97,7 +97,7 @@ class AuthProvider extends ChangeNotifier {
     required String displayName,
     required String email,
     required String password,
-    String? gender,  // TAMBAH parameter gender
+    String? gender, // TAMBAH parameter gender
   }) async {
     _isLoading = true;
     _error = null;
@@ -117,13 +117,13 @@ class AuthProvider extends ChangeNotifier {
             displayName: displayName,
             createdAt: DateTime.now(),
           );
-          
+
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('auth_token', _token!);
           await prefs.setString('user_id', data['user_id'] ?? '');
           await prefs.setString('user_email', email);
           await prefs.setString('user_name', displayName);
-          
+
           _isLoading = false;
           notifyListeners();
           return true;
@@ -148,13 +148,13 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _user = null;
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
     await prefs.remove('user_id');
     await prefs.remove('user_email');
     await prefs.remove('user_name');
-    
+
     notifyListeners();
   }
 }

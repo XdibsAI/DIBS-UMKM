@@ -11,11 +11,12 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  
+
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
 
@@ -26,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
@@ -116,15 +117,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   labelStyle: const TextStyle(color: Color(0xFF8888AA)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00FFFF), width: 0.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00FFFF), width: 0.5),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFFF).withOpacity(0.3), width: 0.5),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFFF).withOpacity(0.3),
+                        width: 0.5),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00FFFF), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00FFFF), width: 1.5),
                   ),
                   filled: true,
                   fillColor: const Color(0xFF050507),
@@ -140,15 +145,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   labelStyle: const TextStyle(color: Color(0xFF8888AA)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFFF44AA), width: 0.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFFF44AA), width: 0.5),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFFFF44AA).withOpacity(0.3), width: 0.5),
+                    borderSide: BorderSide(
+                        color: const Color(0xFFFF44AA).withOpacity(0.3),
+                        width: 0.5),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFFF44AA), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFFF44AA), width: 1.5),
                   ),
                   filled: true,
                   fillColor: const Color(0xFF050507),
@@ -164,15 +173,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   labelStyle: const TextStyle(color: Color(0xFF8888AA)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00FFAA), width: 0.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00FFAA), width: 0.5),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: const Color(0xFF00FFAA).withOpacity(0.3), width: 0.5),
+                    borderSide: BorderSide(
+                        color: const Color(0xFF00FFAA).withOpacity(0.3),
+                        width: 0.5),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF00FFAA), width: 1.5),
+                    borderSide:
+                        const BorderSide(color: Color(0xFF00FFAA), width: 1.5),
                   ),
                   filled: true,
                   fillColor: const Color(0xFF050507),
@@ -202,7 +215,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               if (email.isEmpty || oldPassword.isEmpty || newPassword.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Email, password lama, dan password baru wajib diisi'),
+                    content: Text(
+                        'Email, password lama, dan password baru wajib diisi'),
                     backgroundColor: Colors.red,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -213,7 +227,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               if (oldPassword == newPassword) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Password baru harus berbeda dari password lama'),
+                    content:
+                        Text('Password baru harus berbeda dari password lama'),
                     backgroundColor: Colors.red,
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -232,7 +247,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   loadingCtx = dialogContext;
                   return const Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF00FFFF)),
                     ),
                   );
                 },
@@ -245,7 +261,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   newPassword,
                 );
 
-                if (loadingCtx != null && Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
+                if (loadingCtx != null &&
+                    Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
                   Navigator.of(loadingCtx!, rootNavigator: true).pop();
                 }
 
@@ -256,7 +273,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('✅ Password updated! Silakan login dengan password baru'),
+                      content: Text(
+                          '✅ Password updated! Silakan login dengan password baru'),
                       backgroundColor: Color(0xFF12121A),
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
@@ -266,10 +284,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                   );
                 } else {
-                  throw Exception(res['message'] ?? res['detail'] ?? 'Gagal reset password');
+                  throw Exception(res['message'] ??
+                      res['detail'] ??
+                      'Gagal reset password');
                 }
               } catch (e) {
-                if (loadingCtx != null && Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
+                if (loadingCtx != null &&
+                    Navigator.of(loadingCtx!, rootNavigator: true).canPop()) {
                   Navigator.of(loadingCtx!, rootNavigator: true).pop();
                 }
 
@@ -324,12 +345,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFF00FFFF).withOpacity(_glowAnimation.value),
+                            color: const Color(0xFF00FFFF)
+                                .withOpacity(_glowAnimation.value),
                             width: 3,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF00FFFF).withOpacity(_glowAnimation.value * 0.3),
+                              color: const Color(0xFF00FFFF)
+                                  .withOpacity(_glowAnimation.value * 0.3),
                               blurRadius: 30,
                               spreadRadius: 10,
                             ),
@@ -460,12 +483,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor: const Color(0xFF00FFFF),
                             foregroundColor: const Color(0xFF0A0A0F),
-                            disabledBackgroundColor: const Color(0xFF00FFFF).withOpacity(0.3),
+                            disabledBackgroundColor:
+                                const Color(0xFF00FFFF).withOpacity(0.3),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             elevation: 8,
-                            shadowColor: const Color(0xFF00FFFF).withOpacity(0.5),
+                            shadowColor:
+                                const Color(0xFF00FFFF).withOpacity(0.5),
                           ),
                           child: auth.isLoading
                               ? const SizedBox(

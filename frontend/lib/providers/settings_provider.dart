@@ -31,7 +31,7 @@ class SettingsProvider extends ChangeNotifier {
     if (key == 'theme') {
       _theme = value as String;
     }
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value.toString());
     notifyListeners();

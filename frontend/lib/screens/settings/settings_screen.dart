@@ -43,7 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    
+
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? true;
       _autoSaveEnabled = prefs.getBool('auto_save_enabled') ?? true;
@@ -69,11 +69,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isDarkMode = isDark;
     });
     settings.updateSetting('theme', isDark ? 'dark' : 'light');
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(isDark ? '🌙 Dark Mode aktif' : '☀️ Light Mode aktif'),
-        backgroundColor: isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight,
+        backgroundColor:
+            isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
         shape: RoundedRectangleBorder(
@@ -92,11 +93,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.user;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final bgColor = isDark ? DibsTheme.backgroundDark : DibsTheme.backgroundLight;
-    final surfaceColor = isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight;
-    final textColor = isDark ? DibsTheme.textPrimaryDark : DibsTheme.textPrimaryLight;
-    final secondaryTextColor = isDark ? DibsTheme.textSecondaryDark : DibsTheme.textSecondaryLight;
+
+    final bgColor =
+        isDark ? DibsTheme.backgroundDark : DibsTheme.backgroundLight;
+    final surfaceColor =
+        isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight;
+    final textColor =
+        isDark ? DibsTheme.textPrimaryDark : DibsTheme.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? DibsTheme.textSecondaryDark : DibsTheme.textSecondaryLight;
     final accentColor = isDark ? DibsTheme.accentCyan : DibsTheme.accentCyan;
 
     return Scaffold(
@@ -115,7 +120,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: surfaceColor,
-                border: Border(bottom: BorderSide(color: isDark ? DibsTheme.borderDark : DibsTheme.borderLight)),
+                border: Border(
+                    bottom: BorderSide(
+                        color: isDark
+                            ? DibsTheme.borderDark
+                            : DibsTheme.borderLight)),
               ),
               child: Column(
                 children: [
@@ -130,7 +139,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     user?.displayName ?? 'User',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textColor),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -144,7 +156,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Appearance Section
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text('APPEARANCE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text('APPEARANCE',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -168,7 +184,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // AI Provider Section - TAMBAHAN
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text('AI PROVIDER', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text('AI PROVIDER',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -178,19 +198,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Icons.auto_awesome,
                   color: _useNvidia ? Colors.purple : Colors.grey,
                 ),
-                title: Text('Use NVIDIA (Kimi K2.5)', style: TextStyle(color: textColor)),
+                title: Text('Use NVIDIA (Kimi K2.5)',
+                    style: TextStyle(color: textColor)),
                 subtitle: Text(
-                  _useNvidia ? 'Menggunakan Kimi K2.5 dari NVIDIA' : 'Menggunakan Ollama (Local)',
+                  _useNvidia
+                      ? 'Menggunakan Kimi K2.5 dari NVIDIA'
+                      : 'Menggunakan Ollama (Local)',
                   style: TextStyle(color: secondaryTextColor, fontSize: 12),
                 ),
                 value: _useNvidia,
                 onChanged: (val) {
                   setState(() => _useNvidia = val);
                   _saveSettings();
-                  
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(val ? '✅ NVIDIA AI diaktifkan' : '✅ Ollama AI diaktifkan'),
+                      content: Text(val
+                          ? '✅ NVIDIA AI diaktifkan'
+                          : '✅ Ollama AI diaktifkan'),
                       backgroundColor: surfaceColor,
                       behavior: SnackBarBehavior.floating,
                       duration: const Duration(seconds: 1),
@@ -205,19 +230,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (!_useNvidia) ...[
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text('AI MODEL (OLLAMA)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                child: Text('AI MODEL (OLLAMA)',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
               ),
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 color: surfaceColor,
                 child: ListTile(
                   leading: const Icon(Icons.psychology, color: Colors.purple),
-                  title: Text('Model Selection', style: TextStyle(color: textColor)),
+                  title: Text('Model Selection',
+                      style: TextStyle(color: textColor)),
                   subtitle: Text(
-                    _models.firstWhere((m) => m['value'] == _selectedModel)['name']!,
+                    _models.firstWhere(
+                        (m) => m['value'] == _selectedModel)['name']!,
                     style: TextStyle(color: secondaryTextColor),
                   ),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                  trailing: Icon(Icons.arrow_forward_ios,
+                      size: 16, color: secondaryTextColor),
                   onTap: () => _showModelPicker(context, isDark, _models),
                 ),
               ),
@@ -227,19 +259,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (_useNvidia) ...[
               const Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Text('NVIDIA MODEL', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                child: Text('NVIDIA MODEL',
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
               ),
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 color: surfaceColor,
                 child: ListTile(
                   leading: const Icon(Icons.cloud, color: Colors.blue),
-                  title: Text('NVIDIA Model', style: TextStyle(color: textColor)),
+                  title:
+                      Text('NVIDIA Model', style: TextStyle(color: textColor)),
                   subtitle: Text(
-                    _nvidiaModels.firstWhere((m) => m['value'] == _selectedModel, orElse: () => _nvidiaModels[0])['name']!,
+                    _nvidiaModels.firstWhere(
+                        (m) => m['value'] == _selectedModel,
+                        orElse: () => _nvidiaModels[0])['name']!,
                     style: TextStyle(color: secondaryTextColor),
                   ),
-                  trailing: Icon(Icons.arrow_forward_ios, size: 16, color: secondaryTextColor),
+                  trailing: Icon(Icons.arrow_forward_ios,
+                      size: 16, color: secondaryTextColor),
                   onTap: () => _showModelPicker(context, isDark, _nvidiaModels),
                 ),
               ),
@@ -248,7 +288,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Preferences
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text('PREFERENCES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text('PREFERENCES',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -257,8 +301,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   SwitchListTile(
                     secondary: Icon(Icons.notifications, color: Colors.orange),
-                    title: Text('Notifications', style: TextStyle(color: textColor)),
-                    subtitle: Text('Enable push notifications', style: TextStyle(color: secondaryTextColor)),
+                    title: Text('Notifications',
+                        style: TextStyle(color: textColor)),
+                    subtitle: Text('Enable push notifications',
+                        style: TextStyle(color: secondaryTextColor)),
                     value: _notificationsEnabled,
                     onChanged: (val) {
                       setState(() => _notificationsEnabled = val);
@@ -268,8 +314,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   SwitchListTile(
                     secondary: Icon(Icons.save, color: Colors.green),
-                    title: Text('Auto-save Knowledge', style: TextStyle(color: textColor)),
-                    subtitle: Text('Automatically save important info', style: TextStyle(color: secondaryTextColor)),
+                    title: Text('Auto-save Knowledge',
+                        style: TextStyle(color: textColor)),
+                    subtitle: Text('Automatically save important info',
+                        style: TextStyle(color: secondaryTextColor)),
                     value: _autoSaveEnabled,
                     onChanged: (val) {
                       setState(() => _autoSaveEnabled = val);
@@ -283,14 +331,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Language
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text('LANGUAGE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text('LANGUAGE',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               color: surfaceColor,
               child: ListTile(
                 leading: const Icon(Icons.language, color: Colors.blue),
-                title: Text('Response Language', style: TextStyle(color: textColor)),
+                title: Text('Response Language',
+                    style: TextStyle(color: textColor)),
                 subtitle: Text(
                   _selectedLanguage == 'id' ? 'Bahasa Indonesia' : 'English',
                   style: TextStyle(color: secondaryTextColor),
@@ -301,7 +354,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   dropdownColor: surfaceColor,
                   style: TextStyle(color: textColor),
                   items: const [
-                    DropdownMenuItem(value: 'id', child: Text('🇮🇩 Indonesia')),
+                    DropdownMenuItem(
+                        value: 'id', child: Text('🇮🇩 Indonesia')),
                     DropdownMenuItem(value: 'en', child: Text('🇺🇸 English')),
                   ],
                   onChanged: (val) {
@@ -317,7 +371,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Account
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
-              child: Text('ACCOUNT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1)),
+              child: Text('ACCOUNT',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
             ),
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -343,10 +401,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showModelPicker(BuildContext context, bool isDark, List<Map<String, String>> models) {
-    final surfaceColor = isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight;
-    final textColor = isDark ? DibsTheme.textPrimaryDark : DibsTheme.textPrimaryLight;
-    final secondaryTextColor = isDark ? DibsTheme.textSecondaryDark : DibsTheme.textSecondaryLight;
+  void _showModelPicker(
+      BuildContext context, bool isDark, List<Map<String, String>> models) {
+    final surfaceColor =
+        isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight;
+    final textColor =
+        isDark ? DibsTheme.textPrimaryDark : DibsTheme.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? DibsTheme.textSecondaryDark : DibsTheme.textSecondaryLight;
 
     showModalBottomSheet(
       context: context,
@@ -360,28 +422,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Select AI Model', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              child: Text('Select AI Model',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             ),
-            ...models.map((model) => ListTile(
-              leading: Icon(
-                Icons.check_circle,
-                color: _selectedModel == model['value'] ? DibsTheme.accentCyan : Colors.grey.shade300,
-              ),
-              title: Text(model['name']!, style: TextStyle(color: textColor)),
-              subtitle: Text(model['value']!, style: TextStyle(color: secondaryTextColor)),
-              onTap: () {
-                setState(() => _selectedModel = model['value']!);
-                _saveSettings();
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Model changed to ${model['name']}'),
-                    backgroundColor: surfaceColor,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-            )).toList(),
+            ...models
+                .map((model) => ListTile(
+                      leading: Icon(
+                        Icons.check_circle,
+                        color: _selectedModel == model['value']
+                            ? DibsTheme.accentCyan
+                            : Colors.grey.shade300,
+                      ),
+                      title: Text(model['name']!,
+                          style: TextStyle(color: textColor)),
+                      subtitle: Text(model['value']!,
+                          style: TextStyle(color: secondaryTextColor)),
+                      onTap: () {
+                        setState(() => _selectedModel = model['value']!);
+                        _saveSettings();
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Model changed to ${model['name']}'),
+                            backgroundColor: surfaceColor,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                    ))
+                .toList(),
             const SizedBox(height: 16),
           ],
         ),
@@ -393,13 +462,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight,
+        backgroundColor:
+            isDark ? DibsTheme.surfaceDark : DibsTheme.surfaceLight,
         title: const Text('Logout'),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: isDark ? DibsTheme.accentCyan : DibsTheme.accentPink)),
+            child: Text('Cancel',
+                style: TextStyle(
+                    color:
+                        isDark ? DibsTheme.accentCyan : DibsTheme.accentPink)),
           ),
           ElevatedButton(
             onPressed: () {

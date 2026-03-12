@@ -4,7 +4,8 @@ import 'dart:async';
 
 class VoiceScanDialog extends StatefulWidget {
   const VoiceScanDialog({super.key});
-  @override State<VoiceScanDialog> createState() => _VoiceScanDialogState();
+  @override
+  State<VoiceScanDialog> createState() => _VoiceScanDialogState();
 }
 
 class _VoiceScanDialogState extends State<VoiceScanDialog> {
@@ -30,7 +31,7 @@ class _VoiceScanDialogState extends State<VoiceScanDialog> {
           setState(() {
             _text = val.recognizedWords;
           });
-          
+
           // --- AUTO SUBMIT LOGIC ---
           // Jika user berhenti ngomong selama 1.5 detik, otomatis proses
           _stopTimer?.cancel();
@@ -64,9 +65,11 @@ class _VoiceScanDialogState extends State<VoiceScanDialog> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text("Dibs Voice Monitor", style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
+          const Text("Dibs Voice Monitor",
+              style: TextStyle(
+                  color: Colors.cyanAccent, fontWeight: FontWeight.bold)),
           const SizedBox(height: 25),
-          
+
           // Visualizer yang membesar sesuai volume
           AnimatedContainer(
             duration: const Duration(milliseconds: 100),
@@ -87,7 +90,7 @@ class _VoiceScanDialogState extends State<VoiceScanDialog> {
               child: Icon(Icons.mic, color: Colors.white, size: 40),
             ),
           ),
-          
+
           const SizedBox(height: 25),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -103,12 +106,13 @@ class _VoiceScanDialogState extends State<VoiceScanDialog> {
             ),
           ),
           const SizedBox(height: 15),
-          const Text("Diam sejenak untuk memproses otomatis", 
-            style: TextStyle(color: Colors.grey, fontSize: 12)),
+          const Text("Diam sejenak untuk memproses otomatis",
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 20),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Batal", style: TextStyle(color: Colors.redAccent)),
+            child:
+                const Text("Batal", style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),

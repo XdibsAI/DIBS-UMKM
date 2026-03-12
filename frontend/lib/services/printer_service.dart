@@ -2,7 +2,6 @@ import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
 class PrinterService {
-
   static Future<List<BluetoothInfo>> getDevices() async {
     return await PrintBluetoothThermal.pairedBluetooths;
   }
@@ -16,7 +15,6 @@ class PrinterService {
     required int total,
     required String paymentMethod,
   }) async {
-
     final profile = await CapabilityProfile.load();
     final generator = Generator(PaperSize.mm58, profile);
 

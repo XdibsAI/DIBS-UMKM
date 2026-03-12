@@ -25,7 +25,8 @@ class Knowledge {
       tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       filePath: json['file_path'],
       fileType: json['file_type'],
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 

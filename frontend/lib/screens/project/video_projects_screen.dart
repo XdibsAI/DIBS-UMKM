@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 
 import '../../services/api_service.dart';
 import '../../services/video_studio_api.dart';
@@ -84,49 +81,40 @@ class _VideoProjectsScreenState extends State<VideoProjectsScreen> {
     final id = (item['id'] ?? '').toString();
     if (id.isEmpty) return;
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sedang menyimpan video ke Download/DIBS_Videos...'),
+      ),
+    );
+
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Downloading video...')),
-      );
-
-      final url = '${ApiConfig.baseUrl}/video/download/$id';
-      final headers = await VideoStudioApi.authHeaders(json: false);
-      final response = await http.get(Uri.parse(url), headers: headers);
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('HTTP ${response.statusCode}');
-      }
-
-      Directory baseDir;
-      if (Platform.isAndroid) {
-        final dirs = await getExternalStorageDirectories(
-          type: StorageDirectory.movies,
-        );
-        baseDir = (dirs != null && dirs.isNotEmpty)
-            ? dirs.first
-            : await getApplicationDocumentsDirectory();
-      } else {
-        baseDir = await getApplicationDocumentsDirectory();
-      }
-
-      final dibsDir = Directory('${baseDir.path}/DIBS');
-      if (!await dibsDir.exists()) {
-        await dibsDir.create(recursive: true);
-      }
-
-      final shortId = id.length >= 8 ? id.substring(0, 8) : id;
-      final filePath = '${dibsDir.path}/video_$shortId.mp4';
-      final file = File(filePath);
-      await file.writeAsBytes(response.bodyBytes, flush: true);
+      final videoPath = await ApiService.downloadVideo(id);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Video tersimpan: $filePath')),
-      );
+
+      if (videoPath != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Video tersimpan di: $videoPath'),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal simpan video'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Download gagal: $e')),
+        SnackBar(
+          content: Text('Gagal simpan video: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -293,7 +281,9 @@ class _VideoProjectsScreenState extends State<VideoProjectsScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   const SizedBox(height: 8),
-                  if (status == 'completed')
+                  if (status == 'completed' ||
+                      status == 'failed' ||
+                      status == 'failed')
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,

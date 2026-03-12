@@ -5,7 +5,7 @@ class SocialProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _posts = [];
   List<Map<String, dynamic>> _accounts = [];
   Map<String, dynamic> _analytics = {};
-  
+
   bool _isLoading = false;
   bool _isGenerating = false;
   String? _error;
@@ -29,7 +29,7 @@ class SocialProvider extends ChangeNotifier {
 
     try {
       final response = await ApiService.getSocialAccounts();
-      
+
       if (response['status'] == 'success') {
         _accounts = List<Map<String, dynamic>>.from(response['data'] ?? []);
       }
@@ -52,7 +52,7 @@ class SocialProvider extends ChangeNotifier {
         platform: platform,
         status: status,
       );
-      
+
       if (response['status'] == 'success') {
         _posts = List<Map<String, dynamic>>.from(response['data'] ?? []);
       }
@@ -77,16 +77,17 @@ class SocialProvider extends ChangeNotifier {
         'platform': platform,
         'content': content,
         'media_url': mediaUrl,
-        'scheduled_at': scheduledAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+        'scheduled_at':
+            scheduledAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
       };
-      
+
       final response = await ApiService.createSocialPost(data);
-      
+
       if (response['status'] == 'success') {
         await loadPosts();
         return true;
       }
-      
+
       return false;
     } catch (e) {
       _error = e.toString();
@@ -99,13 +100,13 @@ class SocialProvider extends ChangeNotifier {
   Future<bool> deletePost(String postId) async {
     try {
       final response = await ApiService.deleteSocialPost(postId);
-      
+
       if (response['status'] == 'success') {
         _posts.removeWhere((p) => p['id'] == postId);
         notifyListeners();
         return true;
       }
-      
+
       return false;
     } catch (e) {
       _error = e.toString();
@@ -130,10 +131,11 @@ class SocialProvider extends ChangeNotifier {
         'platform': platform,
         'tone': tone,
       });
-      
+
       if (response['status'] == 'success') {
         _generatedCaption = response['data']['caption'] ?? '';
-        _suggestedHashtags = List<String>.from(response['data']['hashtags'] ?? []);
+        _suggestedHashtags =
+            List<String>.from(response['data']['hashtags'] ?? []);
       } else {
         _error = response['message'];
       }
@@ -147,7 +149,8 @@ class SocialProvider extends ChangeNotifier {
   }
 
   // Load analytics
-  Future<void> loadAnalytics({String? platform, String period = '7days'}) async {
+  Future<void> loadAnalytics(
+      {String? platform, String period = '7days'}) async {
     _isLoading = true;
     notifyListeners();
 
@@ -156,7 +159,7 @@ class SocialProvider extends ChangeNotifier {
         platform: platform,
         period: period,
       );
-      
+
       if (response['status'] == 'success') {
         _analytics = response['data'] ?? {};
       }
@@ -181,12 +184,12 @@ class SocialProvider extends ChangeNotifier {
         'username': username,
         'access_token': accessToken,
       });
-      
+
       if (response['status'] == 'success') {
         await loadAccounts();
         return true;
       }
-      
+
       return false;
     } catch (e) {
       _error = e.toString();

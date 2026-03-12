@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import tempfile
 import urllib.request
@@ -7,6 +8,86 @@ from pathlib import Path
 from typing import Optional, Dict, List, Any
 
 logger = logging.getLogger(__name__)
+
+
+def _scene_text_layout(kind: str):
+    k = str(kind or "").strip().lower()
+    layouts = {
+        "hook": {"title_y": 760, "body_y": 1040, "title_size": 80, "body_size": 42, "align": "center"},
+        "education": {"title_y": 820, "body_y": 1090, "title_size": 68, "body_size": 40, "align": "center"},
+        "motivasi": {"title_y": 860, "body_y": 1120, "title_size": 72, "body_size": 40, "align": "center"},
+        "motivation": {"title_y": 860, "body_y": 1120, "title_size": 72, "body_size": 40, "align": "center"},
+        "product": {"title_y": 720, "body_y": 1210, "title_size": 66, "body_size": 38, "align": "center"},
+        "offer": {"title_y": 760, "body_y": 1150, "title_size": 70, "body_size": 42, "align": "center"},
+        "cta": {"title_y": 900, "body_y": 1180, "title_size": 64, "body_size": 36, "align": "center"},
+    }
+    return layouts.get(k, {"title_y": 820, "body_y": 1080, "title_size": 70, "body_size": 40, "align": "center"})
+
+
+
+def _clean_video_text(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+
+    # buang bullet / numbering
+    text = re.sub(r'^[\-\*\d\.\)\s]+', '', text)
+
+    # buang label storyboard umum
+    text = re.sub(
+        r'\b(Pembuka|Hook|Intro|Akuisisi|Transformasi|Klimaks|Penutup|CTA|Closing|Scene\s*\d+)\b\s*\([^\)]*\)',
+        '',
+        text,
+        flags=re.I
+    )
+
+    # buang frasa prompt-ish yang sering nyangkut
+    bad_prefixes = [
+        "buat video",
+        "video motivasi",
+        "video promo",
+        "video edukasi",
+        "video tutorial",
+        "judul:",
+        "durasi:",
+        "tema:",
+        "struktur narasi:",
+        "visual & musik:",
+        "tips produksi:",
+    ]
+    lowered = text.lower()
+    for bp in bad_prefixes:
+        if lowered.startswith(bp):
+            text = ""
+            break
+
+    text = text.replace("**", "").replace("__", "").replace("•", " ")
+    text = text.replace("“", '"').replace("”", '"').replace("’", "'")
+    text = re.sub(r'\s+', ' ', text).strip(" -–—:;,.")
+    return text
+
+
+def _pick_display_text(title: str, text: str, caption: str) -> tuple[str, str, str]:
+    title = _clean_video_text(title)
+    text = _clean_video_text(text)
+    caption = _clean_video_text(caption)
+
+    # prioritas isi nyata
+    main_text = caption or text or title
+    sub_text = ""
+
+    # kalau title beda dan pendek, boleh jadi sub kecil
+    if title and title.lower() != main_text.lower():
+        title_words = set(title.lower().split())
+        main_words = set(main_text.lower().split())
+        overlap = 0
+        if title_words and main_words:
+            overlap = len(title_words & main_words) / max(1, len(title_words))
+        if overlap < 0.6 and len(title.split()) <= 5:
+            sub_text = title
+
+    return title, main_text, sub_text
+
 
 
 class VideoEditor:
@@ -70,11 +151,17 @@ class VideoEditor:
     def _build_scenes(self, plan: Dict[str, Any]) -> List[Dict[str, Any]]:
         scenes = []
         for s in (plan.get("scenes") or [])[:8]:
+            raw_title = str(s.get("title") or "").strip()
+            raw_text = str(s.get("text") or "").strip()
+            raw_caption = str(s.get("caption") or "").strip()
+
+            _, main_text, sub_text = _pick_display_text(raw_title, raw_text, raw_caption)
+
             scenes.append({
                 "kind": str(s.get("kind") or "scene"),
-                "title": str(s.get("title") or "").strip(),
-                "text": str(s.get("text") or "").strip(),
-                "caption": str(s.get("caption") or "").strip(),
+                "title": sub_text,
+                "text": main_text,
+                "caption": "",
                 "brand": str(s.get("brand") or plan.get("brand_name") or "Dibs AI").strip(),
                 "image_path": str(s.get("assigned_image_path") or s.get("image_path") or "").strip(),
                 "product_image_url": str(s.get("product_image_url") or plan.get("product_image_url") or "").strip(),
@@ -84,9 +171,15 @@ class VideoEditor:
     def _make_scene_clip(self, scene: Dict[str, Any], duration: float):
         from moviepy.editor import TextClip, CompositeVideoClip, ColorClip, ImageClip
 
-        title = self._wrap(scene.get("title") or "", 18)
-        body = self._wrap(scene.get("text") or "", 26)
-        caption = self._wrap(scene.get("caption") or "", 24)
+        raw_title = scene.get("title") or ""
+        raw_text = scene.get("text") or ""
+        raw_caption = scene.get("caption") or ""
+        _, main_text, sub_text = _pick_display_text(raw_title, raw_text, raw_caption)
+        kind = scene.get("kind") or scene.get("type") or "scene"
+        layout = _scene_text_layout(kind)
+
+        title = self._wrap(main_text, 18) if main_text else ""
+        body = self._wrap(sub_text, 22) if sub_text else ""
         brand = scene.get("brand") or "Dibs AI"
 
         image_path = scene.get("image_path") or ""
@@ -94,41 +187,64 @@ class VideoEditor:
             image_path = self._safe_download_image(scene.get("product_image_url") or "")
 
         layers = []
-        base = ColorClip(size=(1080, 1920), color=(8, 10, 14), duration=duration)
-        layers.append(base)
 
+        # full background
         if image_path and os.path.exists(image_path):
-            try:
-                bg = ImageClip(image_path).set_duration(duration)
-                if bg.w < bg.h:
-                    bg = bg.resize(height=1920)
-                else:
-                    bg = bg.resize(width=1080)
-                bg = bg.resize(lambda t: 1.0 + (0.06 * (t / max(duration, 0.01))))
-                bg = bg.set_position(lambda t: (-18 * (t / max(duration, 0.01)), -22 * (t / max(duration, 0.01))))
-                layers.append(bg)
-            except Exception as e:
-                logger.warning(f"BG render failed: {e}")
+            bg = ImageClip(image_path).set_duration(duration)
+            bg = bg.resize(height=1920)
+            if bg.w < 1080:
+                bg = bg.resize(width=1080)
+            bg = bg.set_position(("center", "center"))
+            bg = bg.resize(lambda t: 1 + (0.04 * (t / max(duration, 0.1))))
+            layers.append(bg)
+        else:
+            layers.append(ColorClip(size=(1080, 1920), color=(8, 10, 14), duration=duration))
 
-        layers.append(ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=duration).set_opacity(0.30))
+        # soft dark overlay
+        layers.append(
+            ColorClip(size=(1080, 1920), color=(0, 0, 0), duration=duration).set_opacity(0.32)
+        )
 
-        layers.append(ColorClip(size=(820, 92), color=(10, 18, 38), duration=duration).set_opacity(0.75).set_position(("center", 110)))
-        layers.append(self._make_text_clip(TextClip, brand, 34, "white", (760, 48), duration, ("center", 132), font="DejaVu-Sans-Bold"))
+        # brand top
+        brand_clip = self._make_text_clip(
+            TextClip,
+            str(brand),
+            34,
+            "white",
+            (860, 70),
+            duration,
+            ("center", 110),
+            stroke=2,
+        )
+        layers.append(brand_clip)
 
-        layers.append(ColorClip(size=(960, 1040), color=(15, 15, 18), duration=duration).set_opacity(0.18).set_position(("center", 350)))
-
+        # main headline only
         if title:
-            layers.append(self._make_text_clip(TextClip, title, 62, "white", (860, 240), duration, ("center", 690), font="DejaVu-Sans-Bold"))
+            title_clip = self._make_text_clip(
+                TextClip,
+                title,
+                layout["title_size"],
+                "white",
+                (820, 260),
+                duration,
+                ("center", layout["title_y"]),
+                stroke=3,
+            )
+            layers.append(title_clip)
 
-        if body:
-            layers.append(self._make_text_clip(TextClip, body, 34, "#F3F4F6", (800, 220), duration, ("center", 1030), font="DejaVu-Sans", stroke=1.8))
-
-        if caption:
-            layers.append(ColorClip(size=(900, 88), color=(8, 8, 12), duration=duration).set_opacity(0.68).set_position(("center", 1560)))
-            layers.append(self._make_text_clip(TextClip, caption.upper(), 24, "white", (820, 54), duration, ("center", 1581), font="DejaVu-Sans-Bold", stroke=1.2))
-
-        layers.append(ColorClip(size=(760, 64), color=(12, 12, 18), duration=duration).set_opacity(0.6).set_position(("center", 1712)))
-        layers.append(self._make_text_clip(TextClip, brand, 24, "white", (700, 40), duration, ("center", 1724), font="DejaVu-Sans", stroke=1.0))
+        # subtext only if different
+        if body and body.lower() != title.lower():
+            body_clip = self._make_text_clip(
+                TextClip,
+                body,
+                layout["body_size"],
+                "#E5E7EB",
+                (760, 180),
+                duration,
+                ("center", layout["body_y"]),
+                stroke=2,
+            )
+            layers.append(body_clip)
 
         return CompositeVideoClip(layers, size=(1080, 1920)).set_duration(duration)
 

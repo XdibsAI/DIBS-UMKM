@@ -6,7 +6,8 @@ class InclusiveCheckoutScreen extends StatefulWidget {
   const InclusiveCheckoutScreen({Key? key}) : super(key: key);
 
   @override
-  State<InclusiveCheckoutScreen> createState() => _InclusiveCheckoutScreenState();
+  State<InclusiveCheckoutScreen> createState() =>
+      _InclusiveCheckoutScreenState();
 }
 
 class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
@@ -64,23 +65,23 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ...cart.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        '${item['quantity']}x ${item['name']}',
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${item['quantity']}x ${item['name']}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        Text(
+                          'Rp ${item['price'] * item['quantity']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    Text(
-                      'Rp ${item['price'] * item['quantity']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              )),
+                  )),
               const Divider(thickness: 2, height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -131,7 +132,8 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         title: Row(
           children: [
-            Icon(Icons.accessibility_new, color: Theme.of(context).colorScheme.primary),
+            Icon(Icons.accessibility_new,
+                color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             const Text('Mode Inklusif'),
           ],
@@ -158,7 +160,8 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                       SizedBox(height: 8),
                       Text(
                         '🎤 Silakan Bicara untuk Berbelanja',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 8),
@@ -179,7 +182,8 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                   decoration: InputDecoration(
                     labelText: 'Teks Suara (atau ketik manual)',
                     hintText: 'Contoh: 2 keripik pisang 1 cireng',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     prefixIcon: const Icon(Icons.keyboard_voice),
                   ),
                   maxLines: 2,
@@ -195,10 +199,12 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
                         )
                       : const Icon(Icons.send),
-                  label: Text(_isProcessing ? 'Memproses...' : 'Proses Belanja'),
+                  label:
+                      Text(_isProcessing ? 'Memproses...' : 'Proses Belanja'),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -249,7 +255,8 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                     padding: const EdgeInsets.all(32),
                     child: Column(
                       children: const [
-                        Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey),
+                        Icon(Icons.shopping_cart_outlined,
+                            size: 64, color: Colors.grey),
                         SizedBox(height: 8),
                         Text(
                           'Keranjang masih kosong',
@@ -260,23 +267,27 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                   )
                 else
                   ...provider.cart.map((item) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child: Text(
-                          '${item['quantity']}',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primary,
+                            child: Text(
+                              '${item['quantity']}',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          title: Text(item['name']),
+                          subtitle: Text('@ Rp ${item['price']}'),
+                          trailing: Text(
+                            'Rp ${item['price'] * item['quantity']}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
                         ),
-                      ),
-                      title: Text(item['name']),
-                      subtitle: Text('@ Rp ${item['price']}'),
-                      trailing: Text(
-                        'Rp ${item['price'] * item['quantity']}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                    ),
-                  )),
+                      )),
 
                 if (provider.cart.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -289,7 +300,8 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                     children: [
                       const Text(
                         'TOTAL',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
                       ),
                       Text(
                         'Rp ${provider.cartTotal}',
@@ -320,12 +332,14 @@ class _InclusiveCheckoutScreenState extends State<InclusiveCheckoutScreen> {
                           onPressed: () {
                             provider.clearCart();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('✅ Keranjang dikosongkan')),
+                              const SnackBar(
+                                  content: Text('✅ Keranjang dikosongkan')),
                             );
                           },
                           icon: const Icon(Icons.clear_all),
                           label: const Text('Clear'),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red),
                         ),
                       ),
                     ],

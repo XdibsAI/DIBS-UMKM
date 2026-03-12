@@ -14,7 +14,8 @@ import 'screens/auth/register_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'widgets/toko/inclusive_checkout.dart';
 
-const String apiUrl = String.fromEnvironment("API_URL", defaultValue: "http://94.100.26.128:8081/api/v1");
+const String apiUrl = String.fromEnvironment("API_URL",
+    defaultValue: "http://94.100.26.128:8081/api/v1");
 
 void main() {
   runApp(const DibsApp());
@@ -55,12 +56,13 @@ class DibsApp extends StatelessWidget {
             theme: themeData,
             initialRoute: '/',
             routes: {
-        '/': (context) => const AppStartup(),
-        '/home': (context) => HomeScreen(),
-        '/login': (context) => LoginScreen(),
-        '/register': (context) => RegisterScreen(),
-        '/inclusive-checkout': (context) => const InclusiveCheckoutScreen(),
-      },
+              '/': (context) => const AppStartup(),
+              '/home': (context) => HomeScreen(),
+              '/login': (context) => LoginScreen(),
+              '/register': (context) => RegisterScreen(),
+              '/inclusive-checkout': (context) =>
+                  const InclusiveCheckoutScreen(),
+            },
           );
         },
       ),
@@ -75,7 +77,8 @@ class AppStartup extends StatefulWidget {
   State<AppStartup> createState() => _AppStartupState();
 }
 
-class _AppStartupState extends State<AppStartup> with SingleTickerProviderStateMixin {
+class _AppStartupState extends State<AppStartup>
+    with SingleTickerProviderStateMixin {
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
 
@@ -134,12 +137,14 @@ class _AppStartupState extends State<AppStartup> with SingleTickerProviderStateM
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: DibsTheme.accentCyan.withOpacity(_glowAnimation.value),
+                              color: DibsTheme.accentCyan
+                                  .withOpacity(_glowAnimation.value),
                               width: 3,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: DibsTheme.accentCyan.withOpacity(_glowAnimation.value * 0.5),
+                                color: DibsTheme.accentCyan
+                                    .withOpacity(_glowAnimation.value * 0.5),
                                 blurRadius: 20,
                                 spreadRadius: 5,
                               ),
@@ -155,13 +160,15 @@ class _AppStartupState extends State<AppStartup> with SingleTickerProviderStateM
                         Text(
                           'INITIALIZING SYSTEM...',
                           style: TextStyle(
-                            color: DibsTheme.accentCyan.withOpacity(_glowAnimation.value),
+                            color: DibsTheme.accentCyan
+                                .withOpacity(_glowAnimation.value),
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 2,
                             shadows: [
                               Shadow(
-                                color: DibsTheme.accentCyan.withOpacity(_glowAnimation.value * 0.5),
+                                color: DibsTheme.accentCyan
+                                    .withOpacity(_glowAnimation.value * 0.5),
                                 blurRadius: 10,
                               ),
                             ],
@@ -174,7 +181,8 @@ class _AppStartupState extends State<AppStartup> with SingleTickerProviderStateM
                             value: _glowAnimation.value,
                             backgroundColor: DibsTheme.backgroundDark,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              DibsTheme.accentCyan.withOpacity(_glowAnimation.value),
+                              DibsTheme.accentCyan
+                                  .withOpacity(_glowAnimation.value),
                             ),
                           ),
                         ),

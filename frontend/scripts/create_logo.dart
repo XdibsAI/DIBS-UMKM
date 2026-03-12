@@ -12,27 +12,22 @@ void main() {
   img.fill(image, color: img.ColorRgb8(18, 18, 18));
 
   // 3. Gambar Lingkaran Hijau (Aura Icon)
-  img.drawCircle(image, 
-    x: 256, y: 256, radius: 200, 
-    color: img.ColorRgb8(0, 255, 128)
-  );
+  img.drawCircle(image,
+      x: 256, y: 256, radius: 200, color: img.ColorRgb8(0, 255, 128));
 
   // 4. Tambahkan Teks "D1" di tengah
   // Menggunakan arial48 bawaan library yang stabil
-  img.drawString(image, 'D1', 
-    font: img.arial48, 
-    x: 225, y: 230, 
-    color: img.ColorRgb8(255, 255, 255)
-  );
+  img.drawString(image, 'D1',
+      font: img.arial48, x: 225, y: 230, color: img.ColorRgb8(255, 255, 255));
 
   // 5. Simpan hasil ke folder assets
   final logoPath = 'assets/images/logo.png';
   final foregroundPath = 'assets/images/logo_foreground.png';
-  
+
   Directory('assets/images').createSync(recursive: true);
 
   File(logoPath).writeAsBytesSync(img.encodePng(image));
-  
+
   // Buat versi foreground (sedikit lebih kecil untuk adaptif icon)
   final foreground = img.copyResize(image, width: 432, height: 432);
   File(foregroundPath).writeAsBytesSync(img.encodePng(foreground));

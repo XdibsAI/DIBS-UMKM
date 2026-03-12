@@ -11,7 +11,8 @@ class TransactionScreen extends StatefulWidget {
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
 
-class _TransactionScreenState extends State<TransactionScreen> with SingleTickerProviderStateMixin {
+class _TransactionScreenState extends State<TransactionScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _voiceController = TextEditingController();
   late AnimationController _pulseController;
 
@@ -34,7 +35,7 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final toko = Provider.of<TokoProvider>(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('SCAN TRANSAKSI'),
@@ -75,12 +76,14 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFFFF44AA).withOpacity(0.5 + (_pulseController.value * 0.3)),
+                                color: const Color(0xFFFF44AA).withOpacity(
+                                    0.5 + (_pulseController.value * 0.3)),
                                 width: 3,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFF44AA).withOpacity(0.3 * _pulseController.value),
+                                  color: const Color(0xFFFF44AA).withOpacity(
+                                      0.3 * _pulseController.value),
                                   blurRadius: 30,
                                   spreadRadius: 10,
                                 ),
@@ -129,8 +132,11 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                               style: const TextStyle(color: Color(0xFFE0E0FF)),
                               maxLines: 3,
                               decoration: InputDecoration(
-                                hintText: 'Contoh: beli rokok 20rb, susu 15rb, beras 14rb',
-                                hintStyle: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.5)),
+                                hintText:
+                                    'Contoh: beli rokok 20rb, susu 15rb, beras 14rb',
+                                hintStyle: TextStyle(
+                                    color: const Color(0xFF8888AA)
+                                        .withOpacity(0.5)),
                                 border: InputBorder.none,
                               ),
                             ),
@@ -138,11 +144,15 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                Icon(Icons.spatial_audio, color: const Color(0xFFFF44AA), size: 16),
+                                Icon(Icons.spatial_audio,
+                                    color: const Color(0xFFFF44AA), size: 16),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Fitur voice soon',
-                                  style: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.5), fontSize: 12),
+                                  style: TextStyle(
+                                      color: const Color(0xFF8888AA)
+                                          .withOpacity(0.5),
+                                      fontSize: 12),
                                 ),
                               ],
                             ),
@@ -168,10 +178,12 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0A0A0F)),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF0A0A0F)),
                           ),
                         )
-                      : const Icon(Icons.qr_code_scanner, color: Color(0xFF0A0A0F)),
+                      : const Icon(Icons.qr_code_scanner,
+                          color: Color(0xFF0A0A0F)),
                   label: Text(
                     toko.isLoading ? 'MEMPROSES...' : 'SCAN BELANJA',
                     style: const TextStyle(
@@ -214,7 +226,8 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.check_circle, color: const Color(0xFF00FFAA), size: 20),
+                        Icon(Icons.check_circle,
+                            color: const Color(0xFF00FFAA), size: 20),
                         const SizedBox(width: 8),
                         const Text(
                           'HASIL SCAN',
@@ -229,34 +242,41 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                     const SizedBox(height: 12),
                     SelectableText(
                       toko.lastScanResult!['preview'] ?? '',
-                      style: const TextStyle(color: Color(0xFFE0E0FF), height: 1.5),
+                      style: const TextStyle(
+                          color: Color(0xFFE0E0FF), height: 1.5),
                     ),
-                    if (toko.lastScanResult!['not_found'] != null && 
-                        (toko.lastScanResult!['not_found'] as List).isNotEmpty) ...[
+                    if (toko.lastScanResult!['not_found'] != null &&
+                        (toko.lastScanResult!['not_found'] as List)
+                            .isNotEmpty) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border:
+                              Border.all(color: Colors.orange.withOpacity(0.3)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.warning, color: Colors.orange, size: 16),
+                                Icon(Icons.warning,
+                                    color: Colors.orange, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Produk tidak ditemukan:',
-                                  style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                                  style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              (toko.lastScanResult!['not_found'] as List).join(', '),
+                              (toko.lastScanResult!['not_found'] as List)
+                                  .join(', '),
                               style: const TextStyle(color: Colors.orange),
                             ),
                           ],
@@ -270,11 +290,13 @@ class _TransactionScreenState extends State<TransactionScreen> with SingleTicker
                         children: [
                           TextButton(
                             onPressed: () => toko.clearLastScan(),
-                            child: const Text('BATAL', style: TextStyle(color: Color(0xFF8888AA))),
+                            child: const Text('BATAL',
+                                style: TextStyle(color: Color(0xFF8888AA))),
                           ),
                           const SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: () => _saveTransaction(toko.lastScanResult!),
+                            onPressed: () =>
+                                _saveTransaction(toko.lastScanResult!),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFF44AA),
                               foregroundColor: const Color(0xFF0A0A0F),
@@ -435,10 +457,10 @@ class SalesHistoryScreen extends StatelessWidget {
   }
 
   Widget _buildSaleCard(Map<String, dynamic> sale) {
-    final items = sale['items'] is String 
-        ? jsonDecode(sale['items']) 
+    final items = sale['items'] is String
+        ? jsonDecode(sale['items'])
         : (sale['items'] as List? ?? []);
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -496,7 +518,8 @@ class SalesHistoryScreen extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: const Color(0xFF00FFAA).withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -517,15 +540,15 @@ class SalesHistoryScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ...items.take(2).map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                '• ${item['name']}: ${item['qty']} x Rp ${item['price']?.toStringAsFixed(0)}',
-                style: TextStyle(
-                  color: const Color(0xFF8888AA).withOpacity(0.9),
-                  fontSize: 13,
-                ),
-              ),
-            )),
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '• ${item['name']}: ${item['qty']} x Rp ${item['price']?.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      color: const Color(0xFF8888AA).withOpacity(0.9),
+                      fontSize: 13,
+                    ),
+                  ),
+                )),
             if (items.length > 2)
               Text(
                 '+${items.length - 2} item lainnya',

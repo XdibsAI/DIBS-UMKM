@@ -12,7 +12,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _refreshController;
 
   @override
@@ -22,7 +23,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
       duration: const Duration(seconds: 1),
       vsync: this,
     );
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadDashboardData();
     });
@@ -107,19 +108,24 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       const SizedBox(height: 24),
 
                       // Low Stock Alert
-                      if (toko.dashboardSummary?['alerts']?['low_stock'] != null &&
-                          (toko.dashboardSummary!['alerts']['low_stock'] as List).isNotEmpty)
+                      if (toko.dashboardSummary?['alerts']?['low_stock'] !=
+                              null &&
+                          (toko.dashboardSummary!['alerts']['low_stock']
+                                  as List)
+                              .isNotEmpty)
                         _buildLowStockSection(toko),
                       const SizedBox(height: 24),
 
                       // Recent Transactions
-                      _buildSectionTitle('TRANSAKSI TERBARU', const Color(0xFFFF44AA)),
+                      _buildSectionTitle(
+                          'TRANSAKSI TERBARU', const Color(0xFFFF44AA)),
                       const SizedBox(height: 12),
                       _buildRecentTransactions(toko),
                       const SizedBox(height: 24),
 
                       // Top Products (placeholder)
-                      _buildSectionTitle('PRODUK POPULER', const Color(0xFF00FFAA)),
+                      _buildSectionTitle(
+                          'PRODUK POPULER', const Color(0xFF00FFAA)),
                       const SizedBox(height: 12),
                       _buildTopProducts(toko),
                     ],
@@ -214,7 +220,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           value: '${products['low_stock'] ?? 0}',
           subtitle: 'Perlu restok',
           icon: Icons.warning,
-          color: products['low_stock'] > 0 ? Colors.red : const Color(0xFF00FFAA),
+          color:
+              products['low_stock'] > 0 ? Colors.red : const Color(0xFF00FFAA),
         ),
         _buildStatCard(
           title: 'PENJUALAN HARI INI',
@@ -226,7 +233,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         _buildStatCard(
           title: 'NILAI STOK',
           value: 'Rp ${(inventory['total_value'] ?? 0).toStringAsFixed(0)}',
-          subtitle: 'Modal: Rp ${(inventory['total_investment'] ?? 0).toStringAsFixed(0)}',
+          subtitle:
+              'Modal: Rp ${(inventory['total_investment'] ?? 0).toStringAsFixed(0)}',
           icon: Icons.attach_money,
           color: const Color(0xFF00FFAA),
         ),
@@ -336,7 +344,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const TransactionScreen()),
+                MaterialPageRoute(
+                    builder: (context) => const TransactionScreen()),
               );
             },
           ),
@@ -386,7 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
 
   Widget _buildLowStockSection(TokoProvider toko) {
     final lowStock = toko.dashboardSummary!['alerts']['low_stock'] as List;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -421,29 +430,30 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
           ),
           const SizedBox(height: 12),
           ...lowStock.take(3).map((product) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    product['name'],
-                    style: const TextStyle(color: Color(0xFFE0E0FF)),
-                  ),
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        product['name'],
+                        style: const TextStyle(color: Color(0xFFE0E0FF)),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Stok: ${product['stock']}',
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Stok: ${product['stock']}',
-                    style: const TextStyle(color: Colors.red, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          )),
+              )),
           if (lowStock.length > 3)
             Text(
               '+${lowStock.length - 3} produk lainnya',
@@ -474,11 +484,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.receipt_outlined, color: const Color(0xFFFF44AA).withOpacity(0.3), size: 48),
+              Icon(Icons.receipt_outlined,
+                  color: const Color(0xFFFF44AA).withOpacity(0.3), size: 48),
               const SizedBox(height: 8),
               Text(
                 'Belum ada transaksi',
-                style: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8)),
+                style:
+                    TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8)),
               ),
             ],
           ),
@@ -508,10 +520,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         ),
         itemBuilder: (context, index) {
           final sale = toko.sales[index];
-          final items = sale['items'] is String 
-              ? jsonDecode(sale['items']) 
+          final items = sale['items'] is String
+              ? jsonDecode(sale['items'])
               : (sale['items'] as List? ?? []);
-          
+
           return ListTile(
             leading: Container(
               padding: const EdgeInsets.all(8),
@@ -519,7 +531,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 color: const Color(0xFFFF44AA).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.receipt, color: Color(0xFFFF44AA), size: 16),
+              child:
+                  const Icon(Icons.receipt, color: Color(0xFFFF44AA), size: 16),
             ),
             title: Text(
               sale['invoice_number'] ?? 'INV-XXXX',
@@ -527,7 +540,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ),
             subtitle: Text(
               '${items.length} item • ${_formatTime(sale['created_at'])}',
-              style: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8), fontSize: 12),
+              style: TextStyle(
+                  color: const Color(0xFF8888AA).withOpacity(0.8),
+                  fontSize: 12),
             ),
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -552,7 +567,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   Widget _buildTopProducts(TokoProvider toko) {
     // Placeholder - nanti bisa diisi dengan produk terlaris dari API
     final topProducts = toko.products.take(3).toList();
-    
+
     if (topProducts.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(24),
@@ -568,11 +583,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
         child: Center(
           child: Column(
             children: [
-              Icon(Icons.inventory_2_outlined, color: const Color(0xFF00FFAA).withOpacity(0.3), size: 48),
+              Icon(Icons.inventory_2_outlined,
+                  color: const Color(0xFF00FFAA).withOpacity(0.3), size: 48),
               const SizedBox(height: 8),
               Text(
                 'Belum ada produk',
-                style: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8)),
+                style:
+                    TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8)),
               ),
             ],
           ),
@@ -609,7 +626,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 color: const Color(0xFF00FFAA).withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.shopping_bag, color: Color(0xFF00FFAA), size: 16),
+              child: const Icon(Icons.shopping_bag,
+                  color: Color(0xFF00FFAA), size: 16),
             ),
             title: Text(
               product['name'] ?? 'Produk',
@@ -617,7 +635,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             ),
             subtitle: Text(
               'Stok: ${product['stock'] ?? 0}',
-              style: TextStyle(color: const Color(0xFF8888AA).withOpacity(0.8), fontSize: 12),
+              style: TextStyle(
+                  color: const Color(0xFF8888AA).withOpacity(0.8),
+                  fontSize: 12),
             ),
             trailing: Text(
               'Rp ${product['price']?.toStringAsFixed(0)}',

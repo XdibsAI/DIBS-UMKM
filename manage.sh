@@ -12,12 +12,14 @@ IP="94.100.26.128"
 BACKEND_PORT="8081"
 DOWNLOAD_PORT="9091"
 MCP_PORT="8765"
+NGELANTUR_PORT="5000"
 
 BASE_DIR="${HOME}/dibs1"
 FRONTEND_DIR="${BASE_DIR}/frontend"
 BACKEND_DIR="${BASE_DIR}/backend"
 DOWNLOAD_DIR="${BASE_DIR}/downloads"
 MCP_DIR="${BASE_DIR}/mcp-server"
+NGELANTUR_DIR="${HOME}/ngelantur"
 DATA_DIR="${BASE_DIR}/data"
 
 LATEST_APK="${DOWNLOAD_DIR}/dibs1-latest.apk"
@@ -106,6 +108,35 @@ wait_for_backend() {
 
   echo
   err "Backend tidak merespon setelah ${max_attempts} detik"
+  return 1
+}
+
+check_ngelantur() {
+  if curl -fsS "http://127.0.0.1:${NGELANTUR_PORT}/health" >/dev/null 2>&1; then
+    ok "Ngelantur healthy    | port ${NGELANTUR_PORT}"
+    return 0
+  fi
+
+  warn "Ngelantur belum healthy di port ${NGELANTUR_PORT}"
+  return 1
+}
+
+start_ngelantur() {
+  log "Starting Ngelantur..."
+
+  if systemctl list-units --full -all | grep -q "ngelantur.service"; then
+    sudo systemctl start ngelantur 2>/dev/null || true
+    sleep 2
+    if check_ngelantur; then
+      ok "Ngelantur via systemd"
+      return 0
+    fi
+    warn "Service ngelantur ada tapi belum healthy"
+    sudo journalctl -u ngelantur -n 20 --no-pager || true
+    return 1
+  fi
+
+  warn "ngelantur.service belum ada"
   return 1
 }
 
@@ -310,6 +341,7 @@ show_links() {
   echo -e "🌐 Page    : http://${IP}:${DOWNLOAD_PORT}/"
   echo -e "🤖 API     : http://${IP}:${BACKEND_PORT}/api/docs"
   echo -e "💚 Health  : http://${IP}:${BACKEND_PORT}/health"
+  echo -e "🧠 Ngelantur: http://localhost:${NGELANTUR_PORT}/health"
   echo -e "🔧 MCP     : http://localhost:${MCP_PORT}"
   echo
 }
@@ -377,6 +409,22 @@ status() {
     warn "Ollama STOPPED"
   fi
 
+  if systemctl is-active --quiet ngelantur 2>/dev/null; then
+    if curl -fsS "http://127.0.0.1:${NGELANTUR_PORT}/health" >/dev/null 2>&1; then
+      ok "Ngelantur ACTIVE    | systemd | port ${NGELANTUR_PORT}"
+    else
+      warn "Ngelantur service aktif tapi health gagal"
+    fi
+  elif is_running "${NGELANTUR_PORT}"; then
+    if curl -fsS "http://127.0.0.1:${NGELANTUR_PORT}/health" >/dev/null 2>&1; then
+      ok "Ngelantur RUNNING   | manual  | port ${NGELANTUR_PORT}"
+    else
+      warn "Ngelantur port aktif tapi health gagal"
+    fi
+  else
+    warn "Ngelantur STOPPED"
+  fi
+
   # DB
   section "DATABASE"
   if [[ -f "${DATA_DIR}/dibs.db" ]]; then
@@ -413,6 +461,9 @@ stop() {
 
   log "Stopping Backend..."
   sudo systemctl stop dibs-backend 2>/dev/null || kill_port "${BACKEND_PORT}"
+
+  log "Stopping Ngelantur..."
+  sudo systemctl stop ngelantur 2>/dev/null || kill_port "${NGELANTUR_PORT}"
 
   log "Stopping Download Server..."
   kill_port "${DOWNLOAD_PORT}"
@@ -497,6 +548,7 @@ start() {
 
   start_mcp
   start_ollama
+  start_ngelantur
   start_backend
   start_download_server
 

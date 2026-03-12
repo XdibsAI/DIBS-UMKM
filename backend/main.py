@@ -1,6 +1,7 @@
 from routes.customer_routes import router as customer_router
 from routes.customer_chat_routes import router as customer_chat_router
 from routes.chatbot_routes import router as chatbot_router
+from routes.panel_chat_routes import router as panel_chat_router
 """
 DIBS AI - Modular Architecture
 Version 2.0.0
@@ -184,6 +185,7 @@ if dibs_router_available:
 app.include_router(customer_router)
 app.include_router(customer_chat_router)
 app.include_router(chatbot_router)
+app.include_router(panel_chat_router)
 
 # Health endpoint
 @app.get("/health")

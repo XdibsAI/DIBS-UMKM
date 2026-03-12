@@ -10,14 +10,15 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen>
+    with SingleTickerProviderStateMixin {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
-  
+
   // TAMBAH: Variabel untuk gender
   String _selectedGender = 'Laki-laki'; // Default value
   final List<String> _genders = ['Laki-laki', 'Perempuan'];
@@ -33,7 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       duration: const Duration(seconds: 3),
       vsync: this,
     )..repeat(reverse: true);
-    
+
     _glowAnimation = Tween<double>(begin: 0.3, end: 0.8).animate(
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
@@ -79,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
       displayName: _nameController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
-      gender: _selectedGender,  // TAMBAH
+      gender: _selectedGender, // TAMBAH
     );
 
     if (success && mounted) {
@@ -150,12 +151,14 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: const Color(0xFFFF44AA).withOpacity(_glowAnimation.value),
+                                color: const Color(0xFFFF44AA)
+                                    .withOpacity(_glowAnimation.value),
                                 width: 2,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFF44AA).withOpacity(_glowAnimation.value * 0.3),
+                                  color: const Color(0xFFFF44AA)
+                                      .withOpacity(_glowAnimation.value * 0.3),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -297,7 +300,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                             color: Color(0xFFFF44AA),
                           ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
                         ),
                         dropdownColor: const Color(0xFF12121A),
                         icon: Icon(
@@ -314,8 +318,10 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                             child: Row(
                               children: [
                                 Icon(
-                                  gender == 'Laki-laki' ? Icons.male : Icons.female,
-                                  color: gender == 'Laki-laki' 
+                                  gender == 'Laki-laki'
+                                      ? Icons.male
+                                      : Icons.female,
+                                  color: gender == 'Laki-laki'
                                       ? Colors.blue.withOpacity(0.8)
                                       : Colors.pink.withOpacity(0.8),
                                   size: 18,
@@ -453,7 +459,8 @@ class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProvid
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: const Color(0xFFFF44AA),
                           foregroundColor: const Color(0xFF0A0A0F),
-                          disabledBackgroundColor: const Color(0xFFFF44AA).withOpacity(0.3),
+                          disabledBackgroundColor:
+                              const Color(0xFFFF44AA).withOpacity(0.3),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
